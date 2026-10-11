@@ -14,9 +14,9 @@ type WorkPageProps = {
 export default async function WorkPage({ params }: WorkPageProps) {
   const session = await auth();
 
-  if (!session?.user?.id) {
-    redirect("/api/auth/signin");
-  }
+if (!session?.user?.id) {
+  redirect("/login");
+}
 
   const { id } = await params;
 

@@ -17,9 +17,10 @@ export default async function DashboardPage({
 }: DashboardPageProps) {
   const session = await auth();
 
-  if (!session?.user?.id) {
-    redirect("/api/auth/signin");
-  }
+if (!session?.user?.id) {
+  redirect("/login");
+}
+
 
   const params = await searchParams;
   const folderId = params.folder;

@@ -1,5 +1,7 @@
 import Explorer from "./Explorer";
 import Collections from "./Collections";
+import LogoutButton from "./LogoutButton";
+import Link from "next/link";
 
 type Work = {
   id: string;
@@ -38,9 +40,11 @@ export default function Sidebar({
     <aside className="flex h-screen w-72 shrink-0 flex-col border-r border-zinc-800 bg-zinc-950">
       {/* Logo */}
       <div className="flex h-14 items-center border-b border-zinc-800 px-4">
-        <span className="text-base font-semibold tracking-tight text-white">
-          ✦ Benglish
-        </span>
+        <Link href="/dashboard" className="flex items-center gap-2">
+          <span className="text-base font-semibold tracking-tight text-white">
+            Benglish
+          </span>
+        </Link>
       </div>
 
       {/* Explorer */}
@@ -49,30 +53,34 @@ export default function Sidebar({
         selectedFolderId={selectedFolderId}
         selectedWorkId={selectedWorkId}
       />
+
       {/* Collections */}
       <Collections userId={userId} />
-      {/* User */}
+
+      {/* User profile and logout */}
       <div className="border-t border-zinc-800 p-3">
-        <div className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-zinc-900">
+        <div className="flex items-center gap-2 rounded-md px-2 py-2">
           {user.image ? (
             <img
               src={user.image}
               alt={user.name ?? "User"}
-              className="h-8 w-8 rounded-full"
+              className="h-8 w-8 rounded-full object-cover"
             />
           ) : (
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800 text-xs font-semibold text-zinc-300">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-xs font-semibold text-zinc-300">
               {(user.name?.[0] ?? "U").toUpperCase()}
             </div>
           )}
 
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="truncate text-sm text-zinc-200">
               {user.name ?? "User"}
             </p>
 
             <p className="truncate text-xs text-zinc-600">{user.email ?? ""}</p>
           </div>
+
+          <LogoutButton />
         </div>
       </div>
     </aside>
