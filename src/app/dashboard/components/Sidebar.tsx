@@ -2,6 +2,7 @@ import Explorer from "./Explorer";
 import Collections from "./Collections";
 import LogoutButton from "./LogoutButton";
 import Link from "next/link";
+import Logo from "@/components/Logo";
 
 type Work = {
   id: string;
@@ -41,9 +42,7 @@ export default function Sidebar({
       {/* Logo */}
       <div className="flex h-14 items-center border-b border-zinc-800 px-4">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <span className="text-base font-semibold tracking-tight text-white">
-            Benglish
-          </span>
+          <Logo />
         </Link>
       </div>
 

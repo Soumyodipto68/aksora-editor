@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Document, Packer, Paragraph, TextRun } from "docx";
+import Icon from "@/components/Icon";
 
 type ExportWorkButtonProps = {
   title: string;
@@ -35,7 +36,15 @@ export default function ExportWorkButton({
   content,
 }: ExportWorkButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!toastMessage) return;
+
+    const timeout = window.setTimeout(() => setToastMessage(null), 4000);
+    return () => window.clearTimeout(timeout);
+  }, [toastMessage]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -112,7 +121,7 @@ export default function ExportWorkButton({
     const printWindow = window.open("", "_blank");
 
     if (!printWindow) {
-      alert("Please allow pop-ups to export your PDF.");
+      setToastMessage("Please allow pop-ups to export your PDF.");
       return;
     }
 
@@ -200,35 +209,14 @@ export default function ExportWorkButton({
         aria-expanded={isOpen}
         className="inline-flex items-center gap-2 rounded-md border border-zinc-700 px-3 py-2 text-sm font-medium text-zinc-200 transition hover:bg-zinc-800"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          className="h-4 w-4"
-          aria-hidden="true"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M12 3v12m0 0 4-4m-4 4-4-4M5 17v3h14v-3"
-          />
-        </svg>
+        <Icon name="download" className="h-4 w-4" />
         Export
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
+        <Icon
+          name="chevronDown"
           className={`h-3.5 w-3.5 transition-transform ${
             isOpen ? "rotate-180" : ""
           }`}
-          aria-hidden="true"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
-        </svg>
+        />
       </button>
 
       {isOpen && (
@@ -270,6 +258,22 @@ export default function ExportWorkButton({
               PDF
             </span>
             Export PDF
+          </button>
+        </div>
+      )}
+      {toastMessage && (
+        <div
+          role="alert"
+          className="fixed bottom-5 right-5 z-[100] flex max-w-sm items-center gap-3 rounded-lg border border-amber-700/60 bg-zinc-900 px-4 py-3 text-sm text-zinc-100 shadow-xl"
+        >
+          <span className="flex-1">{toastMessage}</span>
+          <button
+            type="button"
+            onClick={() => setToastMessage(null)}
+            aria-label="Dismiss notification"
+            className="rounded p-1 text-zinc-400 transition hover:bg-zinc-800 hover:text-white"
+          >
+            <Icon name="close" className="h-4 w-4" />
           </button>
         </div>
       )}

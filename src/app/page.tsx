@@ -1,6 +1,8 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import Icon, { type IconName } from "@/components/Icon";
+import Logo from "@/components/Logo";
 
 export default async function HomePage() {
   const session = await auth();
@@ -15,8 +17,7 @@ export default async function HomePage() {
       <header className="border-b border-zinc-800/80">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
           <Link href="/" className="flex items-center gap-2">
-            <span className="text-lg">✦</span>
-            <span className="font-semibold tracking-tight">Benglish</span>
+            <Logo />
           </Link>
 
           <nav className="hidden items-center gap-8 text-sm text-zinc-500 md:flex">
@@ -49,7 +50,8 @@ export default async function HomePage() {
         <div className="relative mx-auto max-w-7xl px-6 pb-20 pt-24 sm:pt-32">
           <div className="mx-auto max-w-4xl text-center">
             <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/70 px-4 py-2 text-sm text-zinc-400">
-              <span className="text-white">✦</span>A personal writing workspace
+              <Icon name="sparkles" className="h-4 w-4 text-white" />
+              A personal writing workspace
             </div>
 
             <h1 className="text-5xl font-bold tracking-tight sm:text-7xl">
@@ -101,33 +103,41 @@ export default async function HomePage() {
               <div className="grid min-h-[420px] grid-cols-[210px_1fr]">
                 {/* Sidebar */}
                 <div className="border-r border-zinc-800 bg-zinc-950 p-4">
-                  <div className="mb-6 text-sm font-semibold">✦ Benglish</div>
+                  <Logo className="mb-6" />
 
                   <p className="mb-3 text-[10px] font-semibold tracking-widest text-zinc-600">
                     EXPLORER
                   </p>
 
                   <div className="space-y-1 text-xs">
-                    <div className="rounded bg-zinc-800 px-3 py-2 text-zinc-200">
-                      📂 Stories
+                    <div className="flex items-center gap-2 rounded bg-zinc-800 px-3 py-2 text-zinc-200">
+                      <Icon name="folderOpen" className="h-4 w-4" />
+                      Stories
                     </div>
 
-                    <div className="px-3 py-2 text-zinc-500">
-                      📄 My First Story
+                    <div className="flex items-center gap-2 px-3 py-2 text-zinc-500">
+                      <Icon name="fileText" className="h-4 w-4" />
+                      My First Story
                     </div>
 
-                    <div className="px-3 py-2 text-zinc-500">📄 Kolkata</div>
-
-                    <div className="rounded px-3 py-2 text-zinc-500">
-                      📁 Poems
+                    <div className="flex items-center gap-2 px-3 py-2 text-zinc-500">
+                      <Icon name="fileText" className="h-4 w-4" />
+                      Kolkata
                     </div>
 
-                    <div className="rounded px-3 py-2 text-zinc-500">
-                      📁 Drafts
+                    <div className="flex items-center gap-2 rounded px-3 py-2 text-zinc-500">
+                      <Icon name="folder" className="h-4 w-4" />
+                      Poems
                     </div>
 
-                    <div className="rounded px-3 py-2 text-zinc-500">
-                      📁 Others
+                    <div className="flex items-center gap-2 rounded px-3 py-2 text-zinc-500">
+                      <Icon name="folder" className="h-4 w-4" />
+                      Drafts
+                    </div>
+
+                    <div className="flex items-center gap-2 rounded px-3 py-2 text-zinc-500">
+                      <Icon name="folder" className="h-4 w-4" />
+                      Others
                     </div>
                   </div>
                 </div>
@@ -180,37 +190,37 @@ export default async function HomePage() {
 
           <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <Feature
-              icon="ক"
+              icon="languages"
               title="Bengali Transliteration"
               description="Type Bengali phonetically using English and turn your thoughts into Bengali naturally."
             />
 
             <Feature
-              icon="Aa"
+              icon="type"
               title="English When You Need It"
               description="Keep English text as English whenever transliteration isn't what you want."
             />
 
             <Feature
-              icon="↻"
+              icon="save"
               title="Automatic Saving"
               description="Your writing is continuously saved to your workspace while you work."
             />
 
             <Feature
-              icon="▣"
+              icon="layout"
               title="Organized Workspace"
               description="Keep stories, poems, drafts and other writing organized into folders."
             />
 
             <Feature
-              icon="▤"
+              icon="layers"
               title="Collections"
               description="Group related works together without moving them between folders."
             />
 
             <Feature
-              icon="↓"
+              icon="download"
               title="Export Your Work"
               description="Take your writing with you through TXT, DOCX and PDF exports."
             />
@@ -328,8 +338,7 @@ export default async function HomePage() {
       <footer className="border-t border-zinc-900">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-6 py-8 text-sm text-zinc-600 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
-            <span>✦</span>
-            <span>Benglish</span>
+            <Logo />
           </div>
 
           <p>A personal writing workspace.</p>
@@ -344,14 +353,14 @@ function Feature({
   title,
   description,
 }: {
-  icon: string;
+  icon: IconName;
   title: string;
   description: string;
 }) {
   return (
     <div className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-6 transition hover:border-zinc-700">
       <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-800 text-sm text-zinc-300">
-        {icon}
+        <Icon name={icon} className="h-5 w-5" />
       </div>
 
       <h3 className="mt-5 font-semibold text-zinc-200">{title}</h3>

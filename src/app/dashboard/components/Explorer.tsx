@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import Icon from "@/components/Icon";
 import NewFolderButton from "./NewFolderButton";
 import NewWorkButton from "./NewWorkButton";
 
@@ -77,7 +78,12 @@ function FolderItem({
           className="flex h-7 w-5 shrink-0 items-center justify-center text-xs text-zinc-500"
           aria-label={isOpen ? "Collapse folder" : "Expand folder"}
         >
-          {hasChildren ? (isOpen ? "▾" : "▸") : ""}
+          {hasChildren && (
+            <Icon
+              name={isOpen ? "chevronDown" : "chevronRight"}
+              className="h-3.5 w-3.5"
+            />
+          )}
         </button>
 
         {/* Folder name */}
@@ -87,7 +93,10 @@ function FolderItem({
           onDoubleClick={handleFolderDoubleClick}
           className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5 text-left text-sm text-zinc-300"
         >
-          <span className="text-sm">{isOpen && hasChildren ? "📂" : "📁"}</span>
+          <Icon
+            name={isOpen && hasChildren ? "folderOpen" : "folder"}
+            className="h-4 w-4 shrink-0"
+          />
 
           <span className="truncate">{folder.name}</span>
         </button>
@@ -139,7 +148,7 @@ function FolderItem({
                   paddingLeft: `${44 + level * 16}px`,
                 }}
               >
-                <span className="text-xs">📄</span>
+                <Icon name="fileText" className="h-3.5 w-3.5 shrink-0" />
 
                 <span className="truncate">{work.title}</span>
               </Link>
@@ -168,10 +177,10 @@ export default function Explorer({
 
         <button
           type="button"
-          className="text-sm text-zinc-500 transition hover:text-white"
+          className="text-zinc-500 transition hover:text-white"
           title="More actions"
         >
-          ⋯
+          <Icon name="moreHorizontal" className="h-4 w-4" />
         </button>
       </div>
 
@@ -185,7 +194,7 @@ export default function Explorer({
               : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
           }`}
         >
-          <span>⌂</span>
+          <Icon name="home" className="h-4 w-4" />
           <span>All Works</span>
         </Link>
       </div>

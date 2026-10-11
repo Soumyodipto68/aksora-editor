@@ -5,6 +5,7 @@ import {
   type ChangeEvent,
 } from "react";
 import { useRouter } from "next/navigation";
+import Icon from "@/components/Icon";
 
 type ImportWorkButtonProps = {
   defaultFolderId?: string;
@@ -123,7 +124,10 @@ export default function ImportWorkButton({
       Importing file...
     </>
   ) : (
-    "Import File"
+    <>
+      <Icon name="fileUp" className="h-4 w-4" />
+      Import File
+    </>
   )}
 </button>
 
