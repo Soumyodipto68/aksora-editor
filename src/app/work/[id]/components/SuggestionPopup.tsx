@@ -69,7 +69,7 @@ export default function SuggestionPopup({
               onClick={() => onChooseSuggestion(candidate)}
               className={`flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[13px] ${
                 isActive
-                  ? "bg-[#37373d] text-[#e4e4e4]"
+                  ? "border-l-2 border-sky-400 bg-[#37373d] text-[#e4e4e4]"
                   : "text-[#cccccc] hover:bg-[#2a2d2e]"
               }`}
             >

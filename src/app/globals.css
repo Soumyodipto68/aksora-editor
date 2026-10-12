@@ -3,6 +3,10 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --brand-red: #f25022;
+  --brand-green: #7fba00;
+  --brand-blue: #00a4ef;
+  --brand-yellow: #ffb900;
 }
 
 @theme inline {
@@ -23,4 +27,60 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+.brand-accent-rule {
+  background-image: linear-gradient(
+    90deg,
+    var(--brand-red) 0 25%,
+    var(--brand-green) 25% 50%,
+    var(--brand-blue) 50% 75%,
+    var(--brand-yellow) 75% 100%
+  );
+}
+
+.brand-action {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background-color: #0878d1;
+  color: white;
+  transition: background-color 150ms ease;
+}
+
+.brand-action::after {
+  position: absolute;
+  z-index: -1;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background-image: linear-gradient(
+    90deg,
+    var(--brand-red) 0 25%,
+    var(--brand-green) 25% 50%,
+    var(--brand-blue) 50% 75%,
+    var(--brand-yellow) 75% 100%
+  );
+  content: "";
+}
+
+.brand-action:hover:not(:disabled) {
+  background-color: #1689df;
+}
+
+.brand-input:focus {
+  border-color: var(--brand-blue);
+  box-shadow: 0 0 0 1px var(--brand-blue);
+}
+
+.brand-workspace-active {
+  border-left: 2px solid var(--brand-blue);
+  background-color: rgb(0 164 239 / 10%);
+  color: #e4f5ff;
+}
+
+.brand-editor:focus-within {
+  border-color: rgb(0 164 239 / 55%);
+  box-shadow: 0 0 0 1px rgb(0 164 239 / 18%);
 }

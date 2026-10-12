@@ -64,7 +64,7 @@ function FolderItem({
       {/* Folder */}
       <div
         className={`group flex items-center ${
-          isSelected ? "bg-zinc-800" : "hover:bg-zinc-900"
+          isSelected ? "brand-workspace-active" : "hover:bg-zinc-900"
         }`}
         style={{
           paddingLeft: `${12 + level * 16}px`,
@@ -91,11 +91,15 @@ function FolderItem({
           type="button"
           onClick={handleFolderClick}
           onDoubleClick={handleFolderDoubleClick}
-          className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5 text-left text-sm text-zinc-300"
+          className={`flex min-w-0 flex-1 items-center gap-1.5 py-1.5 text-left text-sm ${
+            isSelected ? "text-sky-200" : "text-zinc-300"
+          }`}
         >
           <Icon
             name={isOpen && hasChildren ? "folderOpen" : "folder"}
-            className="h-4 w-4 shrink-0"
+            className={`h-4 w-4 shrink-0 ${
+              isSelected ? "text-sky-300" : ""
+            }`}
           />
 
           <span className="truncate">{folder.name}</span>
@@ -141,7 +145,7 @@ function FolderItem({
                 href={`/work/${work.id}`}
                 className={`flex items-center gap-2 py-1.5 pr-3 text-sm ${
                   isWorkSelected
-                    ? "bg-zinc-800 text-white"
+                    ? "brand-workspace-active"
                     : "text-zinc-500 hover:bg-zinc-900 hover:text-zinc-300"
                 }`}
                 style={{
@@ -190,7 +194,7 @@ export default function Explorer({
           href="/dashboard"
           className={`flex items-center gap-2 px-4 py-1.5 text-sm ${
             !selectedFolderId && !selectedWorkId
-              ? "bg-zinc-800 text-white"
+              ? "brand-workspace-active"
               : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
           }`}
         >

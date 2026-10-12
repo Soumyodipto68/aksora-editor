@@ -42,6 +42,7 @@ export default async function HomePage() {
           </Link>
         </div>
       </header>
+      <div className="brand-accent-rule h-[3px] opacity-80" />
 
       {/* Hero */}
       <section className="relative overflow-hidden">
@@ -71,7 +72,7 @@ export default async function HomePage() {
             <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link
                 href="/api/auth/signin"
-                className="rounded-lg bg-white px-6 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-zinc-200"
+                className="brand-action rounded-lg px-6 py-3 text-sm font-semibold shadow-lg shadow-sky-950/20"
               >
                 Start Writing
               </Link>
@@ -176,6 +177,7 @@ export default async function HomePage() {
       <section id="features" className="border-t border-zinc-900 px-6 py-24">
         <div className="mx-auto max-w-7xl">
           <div className="max-w-2xl">
+            <div className="brand-accent-rule mb-5 h-1 w-16 rounded-full" />
             <p className="text-sm font-medium text-zinc-500">FEATURES</p>
 
             <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
@@ -234,6 +236,7 @@ export default async function HomePage() {
         className="border-t border-zinc-900 bg-zinc-900/20 px-6 py-24"
       >
         <div className="mx-auto max-w-7xl">
+          <div className="brand-accent-rule mx-auto mb-5 h-1 w-16 rounded-full" />
           <div className="text-center">
             <p className="text-sm font-medium text-zinc-500">HOW IT WORKS</p>
 
@@ -271,6 +274,7 @@ export default async function HomePage() {
       >
         <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-2 lg:items-center">
           <div>
+            <div className="brand-accent-rule mb-5 h-1 w-16 rounded-full" />
             <p className="text-sm font-medium text-zinc-500">WHY BENGLISH</p>
 
             <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
@@ -316,6 +320,7 @@ export default async function HomePage() {
       {/* CTA */}
       <section className="border-t border-zinc-900 px-6 py-24">
         <div className="mx-auto max-w-3xl text-center">
+          <div className="brand-accent-rule mx-auto mb-6 h-1 w-16 rounded-full" />
           <h2 className="text-3xl font-bold tracking-tight sm:text-5xl">
             Your next story starts here.
           </h2>
@@ -327,7 +332,7 @@ export default async function HomePage() {
 
           <Link
             href="/api/auth/signin"
-            className="mt-8 inline-flex rounded-lg bg-white px-7 py-3.5 text-sm font-semibold text-zinc-950 transition hover:bg-zinc-200"
+            className="brand-action mt-8 inline-flex rounded-lg px-7 py-3.5 text-sm font-semibold shadow-lg shadow-sky-950/20"
           >
             Start Writing for Free
           </Link>
@@ -362,6 +367,7 @@ function Feature({
       <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-800 text-sm text-zinc-300">
         <Icon name={icon} className="h-5 w-5" />
       </div>
+      <div className="brand-accent-rule mt-4 h-0.5 w-10 rounded-full opacity-80" />
 
       <h3 className="mt-5 font-semibold text-zinc-200">{title}</h3>
 

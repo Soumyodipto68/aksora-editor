@@ -94,8 +94,8 @@ export default function NewWorkButton({
         aria-label="New Work"
         className={
           compact
-            ? "flex h-6 w-6 items-center justify-center rounded text-base text-zinc-500 transition hover:bg-zinc-800 hover:text-white"
-            : "rounded-md bg-white px-3 py-2 text-sm font-medium text-zinc-950 transition hover:bg-zinc-200"
+            ? "flex h-6 w-6 items-center justify-center rounded text-base text-sky-300/70 transition hover:bg-sky-950/60 hover:text-sky-200"
+            : "brand-action rounded-md px-3 py-2 text-sm font-medium shadow-md shadow-sky-950/20"
         }
       >
         {compact ? "+" : "New Work"}
@@ -154,7 +154,7 @@ export default function NewWorkButton({
                 placeholder="e.g. My new story"
                 autoFocus
                 disabled={loading}
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2.5 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-zinc-600 disabled:opacity-50"
+                className="brand-input w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2.5 text-sm text-white outline-none placeholder:text-zinc-600 disabled:opacity-50"
               />
             </div>
 
@@ -172,7 +172,7 @@ export default function NewWorkButton({
                 value={folderId}
                 onChange={(event) => setFolderId(event.target.value)}
                 disabled={loading}
-                className="w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2.5 text-sm text-white outline-none focus:border-zinc-600 disabled:opacity-50"
+                className="brand-input w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2.5 text-sm text-white outline-none disabled:opacity-50"
               >
                 {folders.map((folder) => (
                   <option key={folder.id} value={folder.id}>
@@ -200,7 +200,7 @@ export default function NewWorkButton({
                 type="button"
                 onClick={createWork}
                 disabled={loading}
-                className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-950 transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+                className="brand-action rounded-lg px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {loading ? "Creating..." : "Create Work"}
               </button>

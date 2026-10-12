@@ -41,7 +41,7 @@ export default function WorkEditorHeader({
           onClick={onToggleBengaliTyping}
           className={`rounded-full border px-3 py-1.5 text-xs transition ${
             bengaliTyping
-              ? "border-emerald-900 bg-emerald-950/50 text-emerald-300"
+              ? "border-sky-700/70 bg-sky-950/50 text-sky-200"
               : "border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-zinc-200"
           }`}
         >

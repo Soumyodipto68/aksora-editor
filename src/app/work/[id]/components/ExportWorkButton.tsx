@@ -207,7 +207,7 @@ export default function ExportWorkButton({
         onClick={() => setIsOpen((open) => !open)}
         aria-haspopup="menu"
         aria-expanded={isOpen}
-        className="inline-flex items-center gap-2 rounded-md border border-zinc-700 px-3 py-2 text-sm font-medium text-zinc-200 transition hover:bg-zinc-800"
+        className="inline-flex items-center gap-2 rounded-md border border-sky-800/70 px-3 py-2 text-sm font-medium text-sky-100 transition hover:border-sky-600 hover:bg-sky-950/40"
       >
         <Icon name="download" className="h-4 w-4" />
         Export

@@ -120,6 +120,7 @@ if (!session?.user?.id) {
       {/* Header */}
       <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div>
+          <div className="brand-accent-rule mb-5 h-1 w-16 rounded-full" />
           <p className="text-sm text-zinc-500">Your workspace</p>
 
           <h1 className="mt-1 text-3xl font-bold tracking-tight">
@@ -152,25 +153,25 @@ if (!session?.user?.id) {
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5">
           <p className="text-sm text-zinc-500">Total Works</p>
 
-          <p className="mt-2 text-3xl font-bold">{totalWorks}</p>
+          <p className="mt-2 text-3xl font-bold text-sky-300">{totalWorks}</p>
         </div>
 
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5">
           <p className="text-sm text-zinc-500">Stories</p>
 
-          <p className="mt-2 text-3xl font-bold">{storyCount}</p>
+          <p className="mt-2 text-3xl font-bold text-orange-300">{storyCount}</p>
         </div>
 
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5">
           <p className="text-sm text-zinc-500">Poems</p>
 
-          <p className="mt-2 text-3xl font-bold">{poemCount}</p>
+          <p className="mt-2 text-3xl font-bold text-lime-300">{poemCount}</p>
         </div>
 
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5">
           <p className="text-sm text-zinc-500">Drafts</p>
 
-          <p className="mt-2 text-3xl font-bold">{draftCount}</p>
+          <p className="mt-2 text-3xl font-bold text-amber-300">{draftCount}</p>
         </div>
       </div>
 

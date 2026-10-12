@@ -288,6 +288,7 @@ export default function CollectionDashboard({
       {/* Header */}
 
       <div className="border-b border-zinc-800 px-8 py-6">
+        <div className="brand-accent-rule mb-5 h-1 w-16 rounded-full" />
         <Link
           href="/dashboard"
           className="text-sm text-zinc-500 transition hover:text-white"
@@ -335,7 +336,7 @@ export default function CollectionDashboard({
             <button
               type="button"
               onClick={openAddWork}
-              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-950 transition hover:bg-zinc-200"
+              className="brand-action rounded-lg px-4 py-2 text-sm font-medium shadow-md shadow-sky-950/20"
             >
               + Add Work
             </button>
@@ -365,7 +366,7 @@ export default function CollectionDashboard({
             <button
               type="button"
               onClick={openAddWork}
-              className="mt-5 rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-950 transition hover:bg-zinc-200"
+              className="brand-action mt-5 rounded-lg px-4 py-2 text-sm font-medium shadow-md shadow-sky-950/20"
             >
               + Add Work
             </button>
@@ -535,7 +536,7 @@ export default function CollectionDashboard({
               }}
               autoFocus
               disabled={renaming}
-              className="mt-5 w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2.5 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-zinc-600 disabled:opacity-50"
+              className="brand-input mt-5 w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2.5 text-sm text-white outline-none placeholder:text-zinc-600 disabled:opacity-50"
             />
 
             <div className="mt-6 flex justify-end gap-3">
@@ -552,7 +553,7 @@ export default function CollectionDashboard({
                 type="button"
                 onClick={renameCollection}
                 disabled={renaming}
-                className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-zinc-950 transition hover:bg-zinc-200 disabled:opacity-50"
+                className="brand-action rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
               >
                 {renaming ? "Saving..." : "Save"}
               </button>

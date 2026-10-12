@@ -110,7 +110,7 @@ export default function WorkActions({
             }
           }}
           disabled={isSaving}
-          className="w-36 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1 text-xs text-white outline-none focus:border-zinc-500"
+          className="brand-input w-36 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1 text-xs text-white outline-none"
         />
 
         <button

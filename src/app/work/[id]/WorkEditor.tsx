@@ -830,6 +830,7 @@ export default function WorkEditor({
 
   return (
     <>
+      <div className="brand-accent-rule mb-4 h-1 w-16 rounded-full" />
       <WorkEditorHeader
         title={title}
         content={content}
@@ -838,7 +839,7 @@ export default function WorkEditor({
         onToggleBengaliTyping={toggleBengaliTyping}
         saveStatus={saveStatus}
       />
-      <div className="mt-8 overflow-visible rounded-xl border border-[#383838] bg-[#1e1e1e]">
+      <div className="brand-editor mt-8 overflow-visible rounded-xl border border-[#383838] bg-[#1e1e1e]">
         <div ref={editorBodyRef} className="relative">
           <SuggestionPopup
             suggestions={suggestions}
