@@ -6,6 +6,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import Icon from "@/components/Icon";
+import Toast from "@/components/Toast";
 
 type ImportWorkButtonProps = {
   defaultFolderId?: string;
@@ -132,11 +133,7 @@ export default function ImportWorkButton({
 </button>
 
 
-      {error && (
-        <p role="alert" className="max-w-xs text-sm text-red-400">
-          {error}
-        </p>
-      )}
+      {error && <Toast message={error} onDismiss={() => setError("")} />}
     </div>
   );
 }

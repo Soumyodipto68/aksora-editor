@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import Toast from "@/components/Toast";
 
 export default function NewCollectionButton() {
   const router = useRouter();
@@ -106,8 +107,6 @@ export default function NewCollectionButton() {
               className="brand-input mt-4 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white outline-none placeholder:text-zinc-600"
             />
 
-            {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
-
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
@@ -129,6 +128,7 @@ export default function NewCollectionButton() {
           </div>
         </div>
       )}
+      {error && <Toast message={error} onDismiss={() => setError("")} />}
     </>
   );
 }

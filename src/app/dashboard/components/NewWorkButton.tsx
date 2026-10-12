@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import Toast from "@/components/Toast";
 
 type Folder = {
   id: string;
@@ -183,8 +184,6 @@ export default function NewWorkButton({
             </div>
 
             {/* Error */}
-            {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
-
             {/* Actions */}
             <div className="mt-6 flex justify-end gap-3">
               <button
@@ -208,6 +207,7 @@ export default function NewWorkButton({
           </div>
         </div>
       )}
+      {error && <Toast message={error} onDismiss={() => setError("")} />}
     </>
   );
 }

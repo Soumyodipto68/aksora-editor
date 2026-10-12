@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Toast from "@/components/Toast";
 
 type Work = {
   id: string;
@@ -346,11 +347,7 @@ export default function CollectionDashboard({
 
       {/* Error */}
 
-      {error && (
-        <div className="px-8 pt-6">
-          <p className="text-sm text-red-400">{error}</p>
-        </div>
-      )}
+      {error && <Toast message={error} onDismiss={() => setError("")} />}
 
       {/* Works */}
 

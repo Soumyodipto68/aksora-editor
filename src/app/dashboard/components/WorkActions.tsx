@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Toast from "@/components/Toast";
 
 type WorkActionsProps = {
   workId: string;
@@ -15,6 +16,8 @@ export default function WorkActions({
   const [title, setTitle] = useState(initialTitle);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
 
   async function handleRename() {
     const trimmedTitle = title.trim();
@@ -56,20 +59,13 @@ export default function WorkActions({
 
       setTitle(initialTitle);
       setIsEditing(false);
+      setToastMessage("Failed to rename work.");
     } finally {
       setIsSaving(false);
     }
   }
 
-  async function handleDelete() {
-    const confirmed = window.confirm(
-      `Delete "${initialTitle}"? This action cannot be undone.`,
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
+  async function deleteWork() {
     try {
       setIsDeleting(true);
 
@@ -85,6 +81,8 @@ export default function WorkActions({
     } catch (error) {
       console.error("Failed to delete work:", error);
       setIsDeleting(false);
+      setDeleteConfirmationOpen(false);
+      setToastMessage("Failed to delete work.");
     }
   }
 
@@ -95,42 +93,50 @@ export default function WorkActions({
 
   if (isEditing) {
     return (
-      <div className="flex items-center gap-2">
-        <input
-          autoFocus
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              handleRename();
-            }
+      <>
+        <div className="flex items-center gap-2">
+          <input
+            autoFocus
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                handleRename();
+              }
 
-            if (event.key === "Escape") {
-              handleCancel();
-            }
-          }}
-          disabled={isSaving}
-          className="brand-input w-36 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1 text-xs text-white outline-none"
-        />
+              if (event.key === "Escape") {
+                handleCancel();
+              }
+            }}
+            disabled={isSaving}
+            className="brand-input w-36 rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1 text-xs text-white outline-none"
+          />
 
-        <button
-          type="button"
-          onClick={handleRename}
-          disabled={isSaving}
-          className="text-xs text-green-500 hover:text-green-400 disabled:opacity-50"
-        >
-          {isSaving ? "..." : "Save"}
-        </button>
+          <button
+            type="button"
+            onClick={handleRename}
+            disabled={isSaving}
+            className="text-xs text-green-500 hover:text-green-400 disabled:opacity-50"
+          >
+            {isSaving ? "..." : "Save"}
+          </button>
 
-        <button
-          type="button"
-          onClick={handleCancel}
-          disabled={isSaving}
-          className="text-xs text-zinc-500 hover:text-zinc-300"
-        >
-          Cancel
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={handleCancel}
+            disabled={isSaving}
+            className="text-xs text-zinc-500 hover:text-zinc-300"
+          >
+            Cancel
+          </button>
+        </div>
+        {toastMessage && (
+          <Toast
+            message={toastMessage}
+            onDismiss={() => setToastMessage("")}
+          />
+        )}
+      </>
     );
   }
 
@@ -147,12 +153,31 @@ export default function WorkActions({
 
       <button
         type="button"
-        onClick={handleDelete}
+        onClick={() => setDeleteConfirmationOpen(true)}
         disabled={isDeleting}
         className="rounded-md px-2 py-1 text-xs text-red-500 transition hover:bg-red-950/40 hover:text-red-400 disabled:opacity-50"
       >
         {isDeleting ? "Deleting..." : "Delete"}
       </button>
+      {deleteConfirmationOpen ? (
+        <Toast
+          message={`Delete "${initialTitle}"? This action cannot be undone.`}
+          variant="confirm"
+          duration={0}
+          actionLabel={isDeleting ? "Deleting..." : "Delete"}
+          actionDisabled={isDeleting}
+          cancelLabel={isDeleting ? undefined : "Cancel"}
+          onAction={() => void deleteWork()}
+          onDismiss={() => setDeleteConfirmationOpen(false)}
+        />
+      ) : (
+        toastMessage && (
+          <Toast
+            message={toastMessage}
+            onDismiss={() => setToastMessage("")}
+          />
+        )
+      )}
     </div>
   );
 }

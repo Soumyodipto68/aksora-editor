@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Document, Packer, Paragraph, TextRun } from "docx";
 import Icon from "@/components/Icon";
+import Toast from "@/components/Toast";
 
 type ExportWorkButtonProps = {
   title: string;
@@ -38,13 +39,6 @@ export default function ExportWorkButton({
   const [isOpen, setIsOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!toastMessage) return;
-
-    const timeout = window.setTimeout(() => setToastMessage(null), 4000);
-    return () => window.clearTimeout(timeout);
-  }, [toastMessage]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -110,6 +104,7 @@ export default function ExportWorkButton({
       downloadBlob(blob, `${getSafeTitle(title)}.docx`);
     } catch (error) {
       console.error("DOCX export failed:", error);
+      setToastMessage("Couldn't export the DOCX file.");
     }
 
     setIsOpen(false);
@@ -262,20 +257,11 @@ export default function ExportWorkButton({
         </div>
       )}
       {toastMessage && (
-        <div
-          role="alert"
-          className="fixed bottom-5 right-5 z-[100] flex max-w-sm items-center gap-3 rounded-lg border border-amber-700/60 bg-zinc-900 px-4 py-3 text-sm text-zinc-100 shadow-xl"
-        >
-          <span className="flex-1">{toastMessage}</span>
-          <button
-            type="button"
-            onClick={() => setToastMessage(null)}
-            aria-label="Dismiss notification"
-            className="rounded p-1 text-zinc-400 transition hover:bg-zinc-800 hover:text-white"
-          >
-            <Icon name="close" className="h-4 w-4" />
-          </button>
-        </div>
+        <Toast
+          message={toastMessage}
+          onDismiss={() => setToastMessage(null)}
+          variant="info"
+        />
       )}
     </div>
   );
