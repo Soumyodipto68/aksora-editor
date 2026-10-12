@@ -1,10 +1,8 @@
 import { signIn } from "@/auth";
-import { ThemeToggle } from "@/components/ThemeProvider";
 
 export default function LoginPage() {
   return (
-    <main className="relative flex min-h-screen items-center justify-center">
-      <ThemeToggle className="absolute right-5 top-5" />
+    <main className="flex min-h-screen items-center justify-center">
       <div>
         <div className="brand-accent-rule mb-5 h-1 w-16 rounded-full" />
         <form

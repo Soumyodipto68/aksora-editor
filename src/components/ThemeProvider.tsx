@@ -4,10 +4,11 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
+  useLayoutEffect,
   useSyncExternalStore,
   type ReactNode,
 } from "react";
+import { usePathname } from "next/navigation";
 
 type Theme = "light" | "dark";
 
@@ -18,10 +19,16 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-function getStoredTheme(): Theme {
+function getStoredTheme(): Theme | null {
   const storedTheme = window.localStorage.getItem("benglish-theme");
   return storedTheme === "light" || storedTheme === "dark"
     ? storedTheme
+    : null;
+}
+
+function getDeviceTheme(): Theme {
+  return window.matchMedia("(prefers-color-scheme: light)").matches
+    ? "light"
     : "dark";
 }
 
@@ -35,30 +42,51 @@ function subscribeToTheme(callback: () => void) {
   };
 }
 
+function subscribeToDeviceTheme(callback: () => void) {
+  const mediaQuery = window.matchMedia("(prefers-color-scheme: light)");
+  mediaQuery.addEventListener("change", callback);
+
+  return () => mediaQuery.removeEventListener("change", callback);
+}
+
 function getServerTheme(): Theme {
   return "dark";
 }
 
+function getServerStoredTheme(): null {
+  return null;
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const theme = useSyncExternalStore(
+  const pathname = usePathname();
+  const storedTheme = useSyncExternalStore(
     subscribeToTheme,
     getStoredTheme,
+    getServerStoredTheme,
+  );
+  const deviceTheme = useSyncExternalStore(
+    subscribeToDeviceTheme,
+    getDeviceTheme,
     getServerTheme,
   );
+  const isPublicPage = pathname === "/" || pathname === "/login";
+  const activeTheme =
+    isPublicPage || storedTheme === null ? deviceTheme : storedTheme;
 
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-  }, [theme]);
+  useLayoutEffect(() => {
+    document.documentElement.dataset.theme = activeTheme;
+  }, [activeTheme]);
 
   const toggleTheme = useCallback(() => {
-    const nextTheme = getStoredTheme() === "dark" ? "light" : "dark";
+    const currentTheme = getStoredTheme() ?? getDeviceTheme();
+    const nextTheme = currentTheme === "dark" ? "light" : "dark";
     window.localStorage.setItem("benglish-theme", nextTheme);
     document.documentElement.dataset.theme = nextTheme;
     window.dispatchEvent(new Event("benglish-theme-change"));
   }, []);
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme: activeTheme, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );
