@@ -1,10 +1,22 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import Icon from "./Icon";
 
 let activeToastCount = 0;
+
+function subscribeToClientReady() {
+  return () => {};
+}
+
+function getClientReadySnapshot() {
+  return true;
+}
+
+function getServerReadySnapshot() {
+  return false;
+}
 
 type ToastProps = {
   message: string;
@@ -27,7 +39,11 @@ export default function Toast({
   actionDisabled = false,
   cancelLabel,
 }: ToastProps) {
-  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+  const clientReady = useSyncExternalStore(
+    subscribeToClientReady,
+    getClientReadySnapshot,
+    getServerReadySnapshot,
+  );
   const toastRef = useRef<HTMLDivElement>(null);
   const messageId = useId();
 
@@ -36,7 +52,6 @@ export default function Toast({
 
     activeToastCount += 1;
     if (appContent) appContent.inert = true;
-    setPortalTarget(document.body);
 
     return () => {
       activeToastCount -= 1;
@@ -54,10 +69,10 @@ export default function Toast({
   }, [actionLabel, duration, message, onDismiss]);
 
   useEffect(() => {
-    if (portalTarget) {
+    if (clientReady) {
       toastRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
     }
-  }, [portalTarget]);
+  }, [clientReady]);
 
   const colorClasses =
     variant === "error"
@@ -66,17 +81,18 @@ export default function Toast({
         ? "border-amber-700/70 text-zinc-100"
         : "border-sky-700/70 text-zinc-100";
 
-  if (!portalTarget) return null;
+  if (!clientReady) return null;
 
   return createPortal(
     <div className="fixed inset-0 z-90 flex items-center justify-center bg-black/55 px-5 py-6 backdrop-blur-[2px]">
       <div
         ref={toastRef}
+        data-variant={variant}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby={`${messageId}-title`}
         aria-describedby={`${messageId}-description`}
-        className={`flex w-full max-w-lg items-start gap-5 rounded-xl border bg-zinc-900 p-6 text-base shadow-2xl ${colorClasses}`}
+        className={`theme-toast flex w-full max-w-lg items-start gap-5 rounded-xl border bg-zinc-900 p-6 text-base shadow-2xl ${colorClasses}`}
       >
         <div className="min-w-0 flex-1">
           <h2 id={`${messageId}-title`} className="text-lg font-semibold">
@@ -123,6 +139,6 @@ export default function Toast({
         </div>
       </div>
     </div>,
-    portalTarget,
+    document.body,
   );
 }

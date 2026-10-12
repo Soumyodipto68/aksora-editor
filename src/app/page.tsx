@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import Icon, { type IconName } from "@/components/Icon";
 import Logo from "@/components/Logo";
+import { ThemeToggle } from "@/components/ThemeProvider";
 
 export default async function HomePage() {
   const session = await auth();
@@ -34,12 +35,15 @@ export default async function HomePage() {
             </a>
           </nav>
 
-          <Link
-            href="/api/auth/signin"
-            className="rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-500 hover:text-white"
-          >
-            Login
-          </Link>
+          <div className="flex items-center gap-2">
+            <ThemeToggle className="px-2 sm:px-3" />
+            <Link
+              href="/api/auth/signin"
+              className="rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-500 hover:text-white"
+            >
+              Login
+            </Link>
+          </div>
         </div>
       </header>
       <div className="brand-accent-rule h-[3px] opacity-80" />

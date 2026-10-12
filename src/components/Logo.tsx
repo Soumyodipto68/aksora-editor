@@ -13,7 +13,7 @@ export default function Logo({
         <svg
           viewBox="0 0 32 32"
           aria-hidden="true"
-          className="h-5 w-5 text-white"
+          className="brand-logo-icon h-5 w-5 text-white"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
         >

@@ -5,6 +5,7 @@ import Link from "next/link";
 import NewWorkButton from "./components/NewWorkButton";
 import WorkActions from "./components/WorkActions";
 import ImportWorkButton from "./components/ImportWorkButton";
+import { ThemeToggle } from "@/components/ThemeProvider";
 
 type DashboardPageProps = {
   searchParams: Promise<{
@@ -134,6 +135,7 @@ if (!session?.user?.id) {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <ThemeToggle iconOnly />
           <NewWorkButton
             folders={folders.map((folder) => ({
               id: folder.id,
