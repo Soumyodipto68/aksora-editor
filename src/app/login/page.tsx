@@ -7,7 +7,7 @@ export default function LoginPage() {
     <main className="login-page">
       <div className="login-shell">
         <header className="login-header">
-          <Link href="/" aria-label="Benglish home" className="login-brand">
+          <Link href="/" aria-label="Aksora home" className="login-brand">
             <Logo textClassName="login-brand-name" />
           </Link>
           <span className="login-header-note">
@@ -187,7 +187,7 @@ export default function LoginPage() {
             </div>
           </div>
           <p className="login-card-footnote">
-            New to Benglish? Your workspace will be ready when you sign in.
+            New to Aksora? Your workspace will be ready when you sign in.
           </p>
         </section>
 

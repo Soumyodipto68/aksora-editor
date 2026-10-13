@@ -3,6 +3,7 @@ import Collections from "./Collections";
 import LogoutButton from "./LogoutButton";
 import Link from "next/link";
 import Logo from "@/components/Logo";
+import WorkspaceSearch from "./WorkspaceSearch";
 
 type Work = {
   id: string;
@@ -45,6 +46,8 @@ export default function Sidebar({
           <Logo />
         </Link>
       </div>
+
+      <WorkspaceSearch />
 
       {/* Explorer */}
       <Explorer

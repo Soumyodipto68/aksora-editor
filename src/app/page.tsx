@@ -30,7 +30,7 @@ export default async function HomePage() {
             </a>
 
             <a href="#why-benglish" className="transition hover:text-white">
-              Why Benglish
+              Why Aksora
             </a>
           </nav>
 
@@ -64,7 +64,7 @@ export default async function HomePage() {
             </h1>
 
             <p className="mx-auto mt-7 max-w-2xl text-base leading-8 text-zinc-400 sm:text-lg">
-              Benglish is a distraction-free writing workspace designed for
+              Aksora is a distraction-free writing workspace designed for
               people who think in both Bengali and English. Write stories,
               poems, drafts and ideas naturally.
             </p>
@@ -96,7 +96,7 @@ export default async function HomePage() {
                 <span className="h-2.5 w-2.5 rounded-full bg-zinc-700" />
 
                 <div className="ml-4 text-xs text-zinc-600">
-                  Benglish Workspace
+                  Aksora Workspace
                 </div>
               </div>
 
@@ -267,7 +267,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Why Benglish */}
+      {/* Why Aksora */}
       <section
         id="why-benglish"
         className="border-t border-zinc-900 px-6 py-24"
@@ -287,7 +287,7 @@ export default async function HomePage() {
             </p>
 
             <p className="mt-4 leading-8 text-zinc-500">
-              Benglish is built around that reality. Instead of forcing you into
+              Aksora is built around that reality. Instead of forcing you into
               one language or one workflow, it gives you a workspace where your
               writing can evolve naturally.
             </p>

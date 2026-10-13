@@ -36,7 +36,48 @@ type PopupPosition = {
   left: number;
 };
 
-const DELIMITERS = /[ \n,.;?!:]/;
+type PendingConversion = {
+  id: number;
+  start: number;
+  word: string;
+  delimiter: string;
+  timer: ReturnType<typeof setTimeout> | null;
+};
+
+type TextChange = {
+  start: number;
+  oldEnd: number;
+  newEnd: number;
+};
+
+const DELIMITERS = /^[ \n,.;?!:]$/;
+const TRANSLITERATION_DELAY = 250;
+
+function getTextChange(previous: string, next: string): TextChange {
+  let start = 0;
+
+  while (
+    start < previous.length &&
+    start < next.length &&
+    previous[start] === next[start]
+  ) {
+    start++;
+  }
+
+  let oldEnd = previous.length;
+  let newEnd = next.length;
+
+  while (
+    oldEnd > start &&
+    newEnd > start &&
+    previous[oldEnd - 1] === next[newEnd - 1]
+  ) {
+    oldEnd--;
+    newEnd--;
+  }
+
+  return { start, oldEnd, newEnd };
+}
 
 export default function WorkEditor({
   workId,
@@ -54,6 +95,7 @@ export default function WorkEditor({
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [suggestionRange, setSuggestionRange] =
     useState<SuggestionRange | null>(null);
+  const suggestionRangeRef = useRef<SuggestionRange | null>(null);
   const [activeSuggestion, setActiveSuggestion] = useState(0);
 
   const [popupPosition, setPopupPosition] = useState<PopupPosition>({
@@ -65,17 +107,19 @@ export default function WorkEditor({
   const transliterationTimeout = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+  const pendingConversionsRef = useRef<PendingConversion[]>([]);
+  const nextConversionIdRef = useRef(0);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const editorBodyRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
 
-  const pendingCaret = useRef<number | null>(null);
+  const pendingSelection = useRef<{ start: number; end: number } | null>(null);
   const contentRef = useRef(initialContent);
   const titleRef = useRef(initialTitle);
 
   const activeWordRef = useRef<ActiveWord | null>(null);
-  const requestIdRef = useRef(0);
+  const suggestionRequestIdRef = useRef(0);
   const bengaliTypingRef = useRef(true);
 
   // Tracks words converted during the current editing session.
@@ -94,24 +138,40 @@ export default function WorkEditor({
       if (transliterationTimeout.current) {
         clearTimeout(transliterationTimeout.current);
       }
+
+      for (const conversion of pendingConversionsRef.current) {
+        if (conversion.timer) {
+          clearTimeout(conversion.timer);
+        }
+      }
+
+      pendingConversionsRef.current = [];
     };
   }, []);
 
   useLayoutEffect(() => {
-    if (pendingCaret.current === null || !textareaRef.current) {
+    if (!pendingSelection.current || !textareaRef.current) {
       return;
     }
 
-    const position = pendingCaret.current;
-
-    textareaRef.current.setSelectionRange(position, position);
-    pendingCaret.current = null;
+    textareaRef.current.setSelectionRange(
+      pendingSelection.current.start,
+      pendingSelection.current.end,
+    );
+    pendingSelection.current = null;
   }, [content]);
 
   function clearSuggestions() {
+    suggestionRequestIdRef.current++;
     setSuggestions([]);
+    suggestionRangeRef.current = null;
     setSuggestionRange(null);
     setActiveSuggestion(0);
+  }
+
+  function updateSuggestionRange(range: SuggestionRange | null) {
+    suggestionRangeRef.current = range;
+    setSuggestionRange(range);
   }
 
   function scheduleSave(nextTitle: string, nextContent: string) {
@@ -242,28 +302,7 @@ export default function WorkEditor({
   // Keeps tracked word positions aligned with document edits.
   // Words touched by an edit are removed from tracking.
   function updateConvertedWordPositions(previous: string, next: string) {
-    let start = 0;
-
-    while (
-      start < previous.length &&
-      start < next.length &&
-      previous[start] === next[start]
-    ) {
-      start++;
-    }
-
-    let oldEnd = previous.length;
-    let newEnd = next.length;
-
-    while (
-      oldEnd > start &&
-      newEnd > start &&
-      previous[oldEnd - 1] === next[newEnd - 1]
-    ) {
-      oldEnd--;
-      newEnd--;
-    }
-
+    const { start, oldEnd, newEnd } = getTextChange(previous, next);
     const delta = newEnd - oldEnd;
 
     convertedWordsRef.current = convertedWordsRef.current.flatMap((word) => {
@@ -284,6 +323,78 @@ export default function WorkEditor({
 
       return [];
     });
+  }
+
+  function updatePendingConversionPositions(
+    start: number,
+    oldEnd: number,
+    newEnd: number,
+  ) {
+    const delta = newEnd - oldEnd;
+
+    pendingConversionsRef.current = pendingConversionsRef.current.flatMap(
+      (conversion) => {
+        const conversionEnd = conversion.start + conversion.word.length + 1;
+
+        if (conversionEnd <= start) {
+          return [conversion];
+        }
+
+        if (conversion.start >= oldEnd) {
+          return [{ ...conversion, start: conversion.start + delta }];
+        }
+
+        if (conversion.timer) {
+          clearTimeout(conversion.timer);
+        }
+
+        return [];
+      },
+    );
+  }
+
+  function rebaseSuggestionRange(
+    start: number,
+    oldEnd: number,
+    newEnd: number,
+  ) {
+    const range = suggestionRangeRef.current;
+
+    if (!range) {
+      return;
+    }
+
+    const delta = newEnd - oldEnd;
+
+    if (oldEnd <= range.start) {
+      updateSuggestionRange({
+        ...range,
+        start: range.start + delta,
+        end: range.end + delta,
+      });
+    } else if (start < range.end) {
+      clearSuggestions();
+    }
+  }
+
+  function rebaseActiveWord(start: number, oldEnd: number, newEnd: number) {
+    const activeWord = activeWordRef.current;
+
+    if (!activeWord) {
+      return;
+    }
+
+    const activeWordEnd = activeWord.start + activeWord.converted.length;
+    const delta = newEnd - oldEnd;
+
+    if (oldEnd <= activeWord.start) {
+      activeWordRef.current = {
+        ...activeWord,
+        start: activeWord.start + delta,
+      };
+    } else if (start < activeWordEnd) {
+      activeWordRef.current = null;
+    }
   }
 
   // Show suggestions after a consistent 250 ms pause.
@@ -317,7 +428,7 @@ export default function WorkEditor({
 
     const word = match[0];
     const start = cursor - word.length;
-    const requestId = ++requestIdRef.current;
+    const requestId = ++suggestionRequestIdRef.current;
 
     transliterationTimeout.current = setTimeout(async () => {
       const currentTextarea = textareaRef.current;
@@ -325,7 +436,7 @@ export default function WorkEditor({
       if (
         !currentTextarea ||
         !bengaliTypingRef.current ||
-        requestId !== requestIdRef.current ||
+        requestId !== suggestionRequestIdRef.current ||
         contentRef.current !== value ||
         currentTextarea.selectionStart !== cursor ||
         currentTextarea.selectionEnd !== cursor
@@ -342,7 +453,7 @@ export default function WorkEditor({
         // Discard results if the user has typed, moved the caret,
         // changed modes, or started a newer suggestion request.
         if (
-          requestId !== requestIdRef.current ||
+          requestId !== suggestionRequestIdRef.current ||
           !bengaliTypingRef.current ||
           !latestTextarea ||
           current !== value ||
@@ -358,7 +469,7 @@ export default function WorkEditor({
         setSuggestions(options);
         setActiveSuggestion(0);
 
-        setSuggestionRange({
+        updateSuggestionRange({
           start,
           end: start + word.length,
           source: word,
@@ -367,11 +478,12 @@ export default function WorkEditor({
       } catch (error) {
         console.error("Transliteration suggestions failed:", error);
       }
-    }, 250);
+    }, TRANSLITERATION_DELAY);
   }
 
-  // Converts a completed Roman word after a delimiter is typed.
-  async function convertWordBeforeDelimiter(value: string, cursor: number) {
+  // Commit completed words independently so rapid typing cannot invalidate
+  // earlier words while a transliteration request is in flight.
+  function convertWordBeforeDelimiter(value: string, cursor: number) {
     if (!bengaliTypingRef.current || cursor < 2) {
       return;
     }
@@ -396,54 +508,142 @@ export default function WorkEditor({
       return;
     }
 
-    try {
-      const candidates = await getCandidates(word);
+    const conversion: PendingConversion = {
+      id: ++nextConversionIdRef.current,
+      start,
+      word,
+      delimiter,
+      timer: null,
+    };
 
-      if (!bengaliTypingRef.current) {
+    pendingConversionsRef.current.push(conversion);
+
+    conversion.timer = setTimeout(() => {
+      const pending = pendingConversionsRef.current.find(
+        ({ id }) => id === conversion.id,
+      );
+
+      if (!pending || !bengaliTypingRef.current) {
         return;
       }
 
-      const current = contentRef.current;
+      pending.timer = null;
 
-      if (
-        current.slice(start, start + word.length) !== word ||
-        current[start + word.length] !== delimiter
-      ) {
-        return;
-      }
+      void getCandidates(word)
+        .then((candidates) => {
+          const pendingIndex = pendingConversionsRef.current.findIndex(
+            ({ id }) => id === conversion.id,
+          );
 
-      const converted = candidates[0] ?? word;
+          if (pendingIndex < 0 || !bengaliTypingRef.current) {
+            return;
+          }
 
-      if (converted === word) {
-        return;
-      }
+          const [pending] = pendingConversionsRef.current.splice(
+            pendingIndex,
+            1,
+          );
+          const current = contentRef.current;
+          const wordEnd = pending.start + pending.word.length;
 
-      const nextContent =
-        current.slice(0, start) +
-        converted +
-        current.slice(start + word.length);
+          if (
+            current.slice(pending.start, wordEnd) !== pending.word ||
+            current[wordEnd] !== pending.delimiter
+          ) {
+            return;
+          }
 
-      const textarea = textareaRef.current;
-      const caret = textarea?.selectionStart ?? cursor;
+          const converted = candidates[0] ?? pending.word;
 
-      updateConvertedWordPositions(current, nextContent);
-      recordConvertedWord(start, word, converted);
+          if (converted === pending.word) {
+            return;
+          }
 
-      activeWordRef.current = {
-        start,
-        roman: word,
-        converted,
-      };
+          const nextContent =
+            current.slice(0, pending.start) +
+            converted +
+            current.slice(wordEnd);
+          const textarea = textareaRef.current;
+          const delta = converted.length - pending.word.length;
+          const selectionStart = textarea?.selectionStart ?? cursor;
+          const selectionEnd = textarea?.selectionEnd ?? selectionStart;
+          const selectionAfterDelimiter =
+            selectionStart === wordEnd + 1 &&
+            selectionEnd === selectionStart;
 
-      pendingCaret.current =
-        caret >= start + word.length
-          ? caret + converted.length - word.length
-          : caret;
+          updateConvertedWordPositions(current, nextContent);
+          rebaseSuggestionRange(
+            pending.start,
+            wordEnd,
+            pending.start + converted.length,
+          );
+          rebaseActiveWord(
+            pending.start,
+            wordEnd,
+            pending.start + converted.length,
+          );
+          updatePendingConversionPositions(
+            pending.start,
+            wordEnd,
+            pending.start + converted.length,
+          );
+          recordConvertedWord(pending.start, pending.word, converted);
 
-      updateContent(nextContent);
-    } catch (error) {
-      console.error("Boundary transliteration failed:", error);
-    }
+          if (selectionAfterDelimiter) {
+            activeWordRef.current = {
+              start: pending.start,
+              roman: pending.word,
+              converted,
+            };
+
+            const options = [...new Set([...candidates, pending.word])];
+
+            setSuggestions(options);
+            setActiveSuggestion(Math.max(0, options.indexOf(converted)));
+            updateSuggestionRange({
+              start: pending.start,
+              end: pending.start + converted.length,
+              source: pending.word,
+              displayed: converted,
+            });
+          }
+
+          const moveSelection = (position: number) => {
+            if (position <= pending.start) {
+              return position;
+            }
+
+            if (position >= wordEnd) {
+              return position + delta;
+            }
+
+            return pending.start + converted.length;
+          };
+
+          if (
+            selectionStart > pending.start ||
+            selectionEnd > pending.start
+          ) {
+            pendingSelection.current = {
+              start: moveSelection(selectionStart),
+              end: moveSelection(selectionEnd),
+            };
+          }
+
+          updateContent(nextContent);
+        })
+        .catch((error: unknown) => {
+          const pendingIndex = pendingConversionsRef.current.findIndex(
+            ({ id }) => id === conversion.id,
+          );
+
+          if (pendingIndex >= 0) {
+            pendingConversionsRef.current.splice(pendingIndex, 1);
+          }
+
+          console.error("Boundary transliteration failed:", error);
+        });
+    }, TRANSLITERATION_DELAY);
   }
 
   function handleContentChange(value: string) {
@@ -461,17 +661,26 @@ export default function WorkEditor({
       if (value.startsWith(convertedPrefix)) {
         const appendedText = value.slice(convertedPrefix.length);
 
-        if (/^[A-Za-z]+$/.test(appendedText)) {
+        if (appendedText.length > 0 && /^[A-Za-z]+$/.test(appendedText)) {
           const restored = prefix + activeWord.roman + appendedText;
 
           activeWordRef.current = null;
-          requestIdRef.current++;
+          suggestionRequestIdRef.current++;
           clearSuggestions();
 
-          pendingCaret.current =
-            prefix.length + activeWord.roman.length + appendedText.length;
-
+          const change = getTextChange(previous, restored);
+          updatePendingConversionPositions(
+            change.start,
+            change.oldEnd,
+            change.newEnd,
+          );
           updateConvertedWordPositions(previous, restored);
+          const restoredCaret =
+            prefix.length + activeWord.roman.length + appendedText.length;
+          pendingSelection.current = {
+            start: restoredCaret,
+            end: restoredCaret,
+          };
           updateContent(restored);
           scheduleAutomaticTransliteration(restored);
 
@@ -484,22 +693,29 @@ export default function WorkEditor({
 
     if (transliterationTimeout.current) {
       clearTimeout(transliterationTimeout.current);
+      transliterationTimeout.current = null;
     }
 
-    requestIdRef.current++;
+    suggestionRequestIdRef.current++;
     clearSuggestions();
 
+    const change = getTextChange(previous, value);
+    updatePendingConversionPositions(
+      change.start,
+      change.oldEnd,
+      change.newEnd,
+    );
     updateConvertedWordPositions(previous, value);
     updateContent(value);
 
-    // The browser inserts the delimiter immediately. Conversion runs
-    // asynchronously so normal typing is not blocked.
+    // Only an inserted delimiter commits a word; deleting or editing one
+    // must not trigger a conversion.
     if (
       cursor > 0 &&
       DELIMITERS.test(value[cursor - 1]) &&
-      value.length >= previous.length
+      value.length > previous.length
     ) {
-      void convertWordBeforeDelimiter(value, cursor);
+      convertWordBeforeDelimiter(value, cursor);
     }
 
     scheduleAutomaticTransliteration(value);
@@ -521,7 +737,13 @@ export default function WorkEditor({
 
     const nextContent =
       current.slice(0, start) + candidate + current.slice(end);
+    const change = getTextChange(current, nextContent);
 
+    updatePendingConversionPositions(
+      change.start,
+      change.oldEnd,
+      change.newEnd,
+    );
     updateConvertedWordPositions(current, nextContent);
 
     if (candidate !== source) {
@@ -537,15 +759,17 @@ export default function WorkEditor({
           }
         : null;
 
-    requestIdRef.current++;
-
     if (transliterationTimeout.current) {
       clearTimeout(transliterationTimeout.current);
+      transliterationTimeout.current = null;
     }
 
     clearSuggestions();
 
-    pendingCaret.current = start + candidate.length;
+    pendingSelection.current = {
+      start: start + candidate.length,
+      end: start + candidate.length,
+    };
     updateContent(nextContent);
     textareaRef.current?.focus();
   }
@@ -574,6 +798,7 @@ export default function WorkEditor({
       return;
     }
 
+    const requestId = ++suggestionRequestIdRef.current;
     const expectedText = word.converted;
 
     try {
@@ -582,8 +807,10 @@ export default function WorkEditor({
 
       // The text may have changed while candidates were loading.
       if (
+        requestId !== suggestionRequestIdRef.current ||
+        !bengaliTypingRef.current ||
         current.slice(word.start, word.start + expectedText.length) !==
-        expectedText
+          expectedText
       ) {
         return;
       }
@@ -592,7 +819,7 @@ export default function WorkEditor({
 
       setSuggestions(options);
 
-      setSuggestionRange({
+      updateSuggestionRange({
         start: word.start,
         end: word.start + expectedText.length,
         source: word.roman,
@@ -607,9 +834,32 @@ export default function WorkEditor({
     }
   }
 
+  function handleSelectionChange() {
+    if (!suggestionRange || !textareaRef.current) {
+      return;
+    }
+
+    const { selectionStart, selectionEnd } = textareaRef.current;
+    const caretAfterDelimiter =
+      selectionStart === selectionEnd &&
+      selectionStart === suggestionRange.end + 1 &&
+      DELIMITERS.test(contentRef.current[suggestionRange.end] ?? "");
+
+    if (
+      selectionStart < suggestionRange.start ||
+      (selectionEnd > suggestionRange.end && !caretAfterDelimiter)
+    ) {
+      clearSuggestions();
+    }
+  }
+
   function handleContentKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     // Space commits the selected suggestion and inserts a space.
-    if (event.key === " " && suggestions.length > 0 && suggestionRange) {
+    if (
+      DELIMITERS.test(event.key) &&
+      suggestions.length > 0 &&
+      suggestionRange
+    ) {
       const textarea = textareaRef.current;
       const { start, end, displayed, source } = suggestionRange;
       const current = contentRef.current;
@@ -625,14 +875,22 @@ export default function WorkEditor({
         const candidate = suggestions[activeSuggestion] ?? suggestions[0];
 
         const nextContent =
-          current.slice(0, start) + candidate + " " + current.slice(end);
-
-        requestIdRef.current++;
+          current.slice(0, start) +
+          candidate +
+          event.key +
+          current.slice(end);
 
         if (transliterationTimeout.current) {
           clearTimeout(transliterationTimeout.current);
+          transliterationTimeout.current = null;
         }
 
+        const change = getTextChange(current, nextContent);
+        updatePendingConversionPositions(
+          change.start,
+          change.oldEnd,
+          change.newEnd,
+        );
         updateConvertedWordPositions(current, nextContent);
 
         if (candidate !== source) {
@@ -640,7 +898,10 @@ export default function WorkEditor({
         }
 
         activeWordRef.current = null;
-        pendingCaret.current = start + candidate.length + 1;
+        pendingSelection.current = {
+          start: start + candidate.length + event.key.length,
+          end: start + candidate.length + event.key.length,
+        };
 
         clearSuggestions();
         updateContent(nextContent);
@@ -693,9 +954,17 @@ export default function WorkEditor({
 
     if (transliterationTimeout.current) {
       clearTimeout(transliterationTimeout.current);
+      transliterationTimeout.current = null;
     }
 
-    requestIdRef.current++;
+    suggestionRequestIdRef.current++;
+    for (const conversion of pendingConversionsRef.current) {
+      if (conversion.timer) {
+        clearTimeout(conversion.timer);
+      }
+    }
+
+    pendingConversionsRef.current = [];
     activeWordRef.current = null;
 
     clearSuggestions();
@@ -857,6 +1126,7 @@ export default function WorkEditor({
             onChange={(event) => handleContentChange(event.target.value)}
             onKeyDown={handleContentKeyDown}
             onClick={() => void handleEditorClick()}
+            onSelect={handleSelectionChange}
             onScroll={updatePopupPosition}
             placeholder="Start writing..."
             className="min-h-[650px] w-full resize-none bg-transparent p-6 text-base leading-8 text-[#d4d4d4] outline-none placeholder:text-[#6e7681]"

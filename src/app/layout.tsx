@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Benglish",
-  description: "Benglish editor for writing and editing work",
+  title: "Aksora",
+  description: "Aksora writing workspace for Bengali and English",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

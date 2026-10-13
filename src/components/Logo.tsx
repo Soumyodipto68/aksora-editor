@@ -34,7 +34,7 @@ export default function Logo({
           />
         </svg>
       </span>
-      <span className={textClassName}>Benglish</span>
+      <span className={textClassName}>Aksora</span>
     </span>
   );
 }
