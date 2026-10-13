@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Document, Packer, Paragraph, TextRun } from "docx";
 import Icon from "@/components/Icon";
 import Toast from "@/components/Toast";
+import { decodeRichContent, richContentToText } from "../richText";
 
 type ExportWorkButtonProps = {
   title: string;
@@ -66,7 +67,7 @@ export default function ExportWorkButton({
   }, []);
 
   function exportAsTxt() {
-    const blob = new Blob([content], {
+    const blob = new Blob([richContentToText(content)], {
       type: "text/plain;charset=utf-8",
     });
 
@@ -75,7 +76,7 @@ export default function ExportWorkButton({
   }
 
   async function exportAsDocx() {
-    const paragraphs = content.split(/\r\n|\n|\r/);
+    const paragraphs = richContentToText(content).split(/\r\n|\n|\r/);
 
     const doc = new Document({
       sections: [
@@ -128,11 +129,7 @@ export default function ExportWorkButton({
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
 
-    const escapedContent = content
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
+    const richHtml = decodeRichContent(content);
 
     printWindow.document.write(`
     <!DOCTYPE html>
@@ -179,7 +176,7 @@ export default function ExportWorkButton({
       </head>
       <body>
         <h1>${escapedTitle}</h1>
-        <div class="content">${escapedContent}</div>
+        <div class="content">${richHtml}</div>
         <script>
           window.onload = () => {
             window.print();

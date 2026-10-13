@@ -1,11 +1,31 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { RICH_TEXT_PREFIX } from "@/app/work/[id]/richText";
 import { NextResponse } from "next/server";
 
 const MAX_QUERY_LENGTH = 100;
 const MAX_RESULTS = 40;
 
+function searchableText(content: string) {
+  if (!content.startsWith(RICH_TEXT_PREFIX)) {
+    return content;
+  }
+
+  return content
+    .slice(RICH_TEXT_PREFIX.length)
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(div|p|li|ul|ol|blockquote)>/gi, "\n")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'");
+}
+
 function createSnippet(content: string, query: string) {
+  content = searchableText(content);
   const matchIndex = content.toLocaleLowerCase().indexOf(query.toLocaleLowerCase());
   const start = matchIndex < 0 ? 0 : Math.max(0, matchIndex - 45);
   const end = Math.min(content.length, start + 120);
@@ -34,6 +54,13 @@ export async function GET(request: Request) {
     );
   }
 
+  const contentTerms = query
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((term) => ({
+      content: { contains: term, mode: "insensitive" as const },
+    }));
+
   try {
     const [works, folders] = await Promise.all([
       prisma.work.findMany({
@@ -42,6 +69,7 @@ export async function GET(request: Request) {
           OR: [
             { title: { contains: query, mode: "insensitive" } },
             { content: { contains: query, mode: "insensitive" } },
+            ...(contentTerms.length > 1 ? [{ AND: contentTerms }] : []),
           ],
         },
         select: {

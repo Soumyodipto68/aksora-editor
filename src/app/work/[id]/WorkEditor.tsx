@@ -11,6 +11,11 @@ import {
 
 import WorkEditorHeader from "./components/WorkEditorHeader";
 import SuggestionPopup from "./components/SuggestionPopup";
+import RichTextToolbar from "./components/RichTextToolbar";
+import {
+  decodeRichContent,
+  encodeRichContent,
+} from "./richText";
 
 type WorkEditorProps = {
   workId: string;
@@ -79,6 +84,118 @@ function getTextChange(previous: string, next: string): TextChange {
   return { start, oldEnd, newEnd };
 }
 
+type EditorPoint = {
+  node: Node;
+  offset: number;
+};
+
+function getEditorText(editor: HTMLElement) {
+  return (editor.innerText || editor.textContent || "").replace(/\r/g, "");
+}
+
+function getEditorPoint(editor: HTMLElement, targetOffset: number): EditorPoint | null {
+  const walker = document.createTreeWalker(
+    editor,
+    NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
+    {
+      acceptNode(node) {
+        return node.nodeType === Node.TEXT_NODE ||
+          (node.nodeType === Node.ELEMENT_NODE &&
+            ["BR", "LI"].includes((node as Element).tagName))
+          ? NodeFilter.FILTER_ACCEPT
+          : NodeFilter.FILTER_SKIP;
+      },
+    },
+  );
+  let offset = 0;
+  let lastPoint: EditorPoint = { node: editor, offset: editor.childNodes.length };
+
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+
+    if (node.nodeType === Node.TEXT_NODE) {
+      const length = node.textContent?.length ?? 0;
+      if (targetOffset <= offset + length) {
+        return { node, offset: Math.max(0, targetOffset - offset) };
+      }
+      offset += length;
+      lastPoint = { node, offset: length };
+      continue;
+    }
+
+    const parent = node.parentNode;
+    if (!parent) {
+      continue;
+    }
+
+    const childIndex = Array.prototype.indexOf.call(parent.childNodes, node);
+    if (
+      (node as Element).tagName === "LI" &&
+      (node as Element).previousElementSibling?.tagName === "LI"
+    ) {
+      if (targetOffset <= offset) {
+        return { node: parent, offset: childIndex };
+      }
+      offset++;
+      lastPoint = { node: parent, offset: childIndex };
+    }
+
+    if ((node as Element).tagName !== "BR") {
+      continue;
+    }
+
+    if (targetOffset <= offset) {
+      return { node: parent, offset: childIndex };
+    }
+
+    offset++;
+    lastPoint = { node: parent, offset: childIndex + 1 };
+  }
+
+  return lastPoint;
+}
+
+function getEditorOffset(editor: HTMLElement, node: Node, nodeOffset: number) {
+  const range = document.createRange();
+  range.selectNodeContents(editor);
+  range.setEnd(node, nodeOffset);
+  const fragment = range.cloneContents();
+  const temporary = document.createElement("div");
+  temporary.appendChild(fragment);
+  return Math.min(getEditorText(temporary).length, getEditorText(editor).length);
+}
+
+function replaceEditorText(previous: string, next: string, editor: HTMLElement) {
+  const change = getTextChange(previous, next);
+  const start = getEditorPoint(editor, change.start);
+  const end = getEditorPoint(editor, change.oldEnd);
+
+  if (!start || !end) {
+    editor.textContent = next;
+    return;
+  }
+
+  const range = document.createRange();
+  range.setStart(start.node, start.offset);
+  range.setEnd(end.node, end.offset);
+  range.deleteContents();
+
+  const replacement = next.slice(change.start, change.newEnd);
+  const fragment = document.createDocumentFragment();
+  const lines = replacement.split("\n");
+
+  lines.forEach((line, index) => {
+    if (index > 0) {
+      fragment.appendChild(document.createElement("br"));
+    }
+    if (line) {
+      fragment.appendChild(document.createTextNode(line));
+    }
+  });
+
+  range.insertNode(fragment);
+}
+
 export default function WorkEditor({
   workId,
   initialTitle,
@@ -111,6 +228,7 @@ export default function WorkEditor({
   const nextConversionIdRef = useRef(0);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
   const editorBodyRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
 
@@ -158,8 +276,31 @@ export default function WorkEditor({
       pendingSelection.current.start,
       pendingSelection.current.end,
     );
+    setEditorSelection(
+      pendingSelection.current.start,
+      pendingSelection.current.end,
+    );
     pendingSelection.current = null;
   }, [content]);
+
+  useLayoutEffect(() => {
+    const editor = editorRef.current;
+
+    if (!editor) {
+      return;
+    }
+
+    editor.innerHTML = decodeRichContent(initialContent);
+    const plainText = getEditorText(editor);
+    contentRef.current = plainText;
+
+    if (textareaRef.current) {
+      textareaRef.current.value = plainText;
+    }
+
+    const serialized = encodeRichContent(editor.innerHTML);
+    setContent(serialized);
+  }, [initialContent]);
 
   function clearSuggestions() {
     suggestionRequestIdRef.current++;
@@ -206,16 +347,188 @@ export default function WorkEditor({
     }, 800);
   }
 
-  function updateContent(value: string) {
+  function updateContent(value: string, editorAlreadyUpdated = false) {
+    if (textareaRef.current) {
+      const selectionStart = textareaRef.current.selectionStart;
+      const selectionEnd = textareaRef.current.selectionEnd;
+      textareaRef.current.value = value;
+      textareaRef.current.setSelectionRange(
+        Math.min(selectionStart, value.length),
+        Math.min(selectionEnd, value.length),
+      );
+    }
+
+    if (!editorAlreadyUpdated && editorRef.current) {
+      replaceEditorText(contentRef.current, value, editorRef.current);
+    }
+
     contentRef.current = value;
-    setContent(value);
-    scheduleSave(titleRef.current, value);
+    const serialized = editorRef.current
+      ? encodeRichContent(editorRef.current.innerHTML)
+      : value;
+    setContent(serialized);
+    scheduleSave(titleRef.current, serialized);
+  }
+
+  function handleFormattedChange() {
+    const editor = editorRef.current;
+
+    if (!editor) {
+      return;
+    }
+
+    const value = getEditorText(editor);
+    const previous = contentRef.current;
+
+    if (value !== previous) {
+      const change = getTextChange(previous, value);
+      updatePendingConversionPositions(
+        change.start,
+        change.oldEnd,
+        change.newEnd,
+      );
+      updateConvertedWordPositions(previous, value);
+      activeWordRef.current = null;
+      clearSuggestions();
+    }
+
+    contentRef.current = value;
+
+    if (textareaRef.current) {
+      const { start, end } = getEditorSelection();
+      textareaRef.current.value = value;
+      textareaRef.current.setSelectionRange(start, end);
+    }
+
+    const serialized = encodeRichContent(editor.innerHTML);
+    setContent(serialized);
+    scheduleSave(titleRef.current, serialized);
+  }
+
+  function setEditorSelection(start: number, end: number) {
+    const editor = editorRef.current;
+
+    if (!editor) {
+      return;
+    }
+
+    const startPoint = getEditorPoint(editor, start);
+    const endPoint = getEditorPoint(editor, end);
+
+    if (!startPoint || !endPoint) {
+      return;
+    }
+
+    const range = document.createRange();
+    range.setStart(startPoint.node, startPoint.offset);
+    range.setEnd(endPoint.node, endPoint.offset);
+
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+  }
+
+  function getEditorSelection() {
+    const editor = editorRef.current;
+    const selection = window.getSelection();
+
+    if (!editor || !selection?.rangeCount) {
+      return { start: contentRef.current.length, end: contentRef.current.length };
+    }
+
+    const range = selection.getRangeAt(0);
+    if (!editor.contains(range.startContainer) || !editor.contains(range.endContainer)) {
+      return { start: contentRef.current.length, end: contentRef.current.length };
+    }
+
+    return {
+      start: getEditorOffset(editor, range.startContainer, range.startOffset),
+      end: getEditorOffset(editor, range.endContainer, range.endOffset),
+    };
+  }
+
+  function syncEditorSelection() {
+    const textarea = textareaRef.current;
+
+    if (!textarea) {
+      return;
+    }
+
+    const { start, end } = getEditorSelection();
+    textarea.setSelectionRange(start, end);
+  }
+
+  function handleEditorSelection() {
+    syncEditorSelection();
+
+    if (!suggestionRange || !textareaRef.current) {
+      return;
+    }
+
+    const { selectionStart, selectionEnd } = textareaRef.current;
+    const caretAfterDelimiter =
+      selectionStart === selectionEnd &&
+      selectionStart === suggestionRange.end + 1 &&
+      DELIMITERS.test(contentRef.current[suggestionRange.end] ?? "");
+
+    if (
+      selectionStart < suggestionRange.start ||
+      (selectionEnd > suggestionRange.end && !caretAfterDelimiter)
+    ) {
+      clearSuggestions();
+    }
+  }
+
+  function handleEditorInput() {
+    const editor = editorRef.current;
+
+    if (!editor) {
+      return;
+    }
+
+    const value = getEditorText(editor);
+    syncEditorSelection();
+    handleContentChange(value, true);
+  }
+
+  function handleEditorPaste(event: React.ClipboardEvent<HTMLDivElement>) {
+    event.preventDefault();
+    const selection = window.getSelection();
+
+    if (!selection?.rangeCount) {
+      return;
+    }
+
+    const text = event.clipboardData.getData("text/plain");
+    const range = selection.getRangeAt(0);
+    range.deleteContents();
+
+    const fragment = document.createDocumentFragment();
+    const lines = text.replace(/\r\n?/g, "\n").split("\n");
+
+    lines.forEach((line, index) => {
+      if (index > 0) {
+        fragment.appendChild(document.createElement("br"));
+      }
+      if (line) {
+        fragment.appendChild(document.createTextNode(line));
+      }
+    });
+
+    range.insertNode(fragment);
+    range.collapse(false);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    handleEditorInput();
   }
 
   function handleTitleChange(value: string) {
     titleRef.current = value;
     setTitle(value);
-    scheduleSave(value, contentRef.current);
+    const serialized = editorRef.current
+      ? encodeRichContent(editorRef.current.innerHTML)
+      : contentRef.current;
+    scheduleSave(value, serialized);
   }
 
   async function getCandidates(word: string): Promise<string[]> {
@@ -646,7 +959,7 @@ export default function WorkEditor({
     }, TRANSLITERATION_DELAY);
   }
 
-  function handleContentChange(value: string) {
+  function handleContentChange(value: string, editorAlreadyUpdated = false) {
     const textarea = textareaRef.current;
     const cursor = textarea?.selectionStart ?? value.length;
     const previous = contentRef.current;
@@ -681,7 +994,10 @@ export default function WorkEditor({
             start: restoredCaret,
             end: restoredCaret,
           };
-          updateContent(restored);
+          if (editorRef.current) {
+            replaceEditorText(value, restored, editorRef.current);
+          }
+          updateContent(restored, true);
           scheduleAutomaticTransliteration(restored);
 
           return;
@@ -706,7 +1022,7 @@ export default function WorkEditor({
       change.newEnd,
     );
     updateConvertedWordPositions(previous, value);
-    updateContent(value);
+    updateContent(value, editorAlreadyUpdated);
 
     // Only an inserted delimiter commits a word; deleting or editing one
     // must not trigger a conversion.
@@ -771,7 +1087,7 @@ export default function WorkEditor({
       end: start + candidate.length,
     };
     updateContent(nextContent);
-    textareaRef.current?.focus();
+    editorRef.current?.focus();
   }
 
   // Click a converted word to reopen its alternatives.
@@ -834,26 +1150,7 @@ export default function WorkEditor({
     }
   }
 
-  function handleSelectionChange() {
-    if (!suggestionRange || !textareaRef.current) {
-      return;
-    }
-
-    const { selectionStart, selectionEnd } = textareaRef.current;
-    const caretAfterDelimiter =
-      selectionStart === selectionEnd &&
-      selectionStart === suggestionRange.end + 1 &&
-      DELIMITERS.test(contentRef.current[suggestionRange.end] ?? "");
-
-    if (
-      selectionStart < suggestionRange.start ||
-      (selectionEnd > suggestionRange.end && !caretAfterDelimiter)
-    ) {
-      clearSuggestions();
-    }
-  }
-
-  function handleContentKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+  function handleContentKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     // Space commits the selected suggestion and inserts a space.
     if (
       DELIMITERS.test(event.key) &&
@@ -943,6 +1240,20 @@ export default function WorkEditor({
     if (event.key === "Escape") {
       event.preventDefault();
       clearSuggestions();
+      return;
+    }
+
+    if (event.key === "Enter" && !event.shiftKey) {
+      const selection = window.getSelection();
+      const anchor =
+        selection?.anchorNode?.nodeType === Node.ELEMENT_NODE
+          ? (selection.anchorNode as Element)
+          : selection?.anchorNode?.parentElement;
+
+      if (!anchor?.closest("li")) {
+        event.preventDefault();
+        document.execCommand("insertLineBreak");
+      }
     }
   }
 
@@ -971,19 +1282,19 @@ export default function WorkEditor({
   }
 
   const updatePopupPosition = useCallback(() => {
-    const textarea = textareaRef.current;
+    const editor = editorRef.current;
     const wrapper = editorBodyRef.current;
 
-    if (!textarea || !wrapper || !suggestionRange) {
+    if (!editor || !wrapper || !suggestionRange) {
       return;
     }
 
-    const caret = textarea.selectionStart;
+    const caret = textareaRef.current?.selectionStart ?? contentRef.current.length;
     const textBeforeCaret = contentRef.current.slice(0, caret);
 
-    const textareaRect = textarea.getBoundingClientRect();
+    const editorRect = editor.getBoundingClientRect();
     const wrapperRect = wrapper.getBoundingClientRect();
-    const computed = window.getComputedStyle(textarea);
+    const computed = window.getComputedStyle(editor);
 
     const mirror = document.createElement("div");
 
@@ -1012,8 +1323,8 @@ export default function WorkEditor({
     }
 
     mirror.style.position = "fixed";
-    mirror.style.left = `${textareaRect.left}px`;
-    mirror.style.top = `${textareaRect.top}px`;
+    mirror.style.left = `${editorRect.left}px`;
+    mirror.style.top = `${editorRect.top}px`;
     mirror.style.height = "auto";
     mirror.style.minHeight = "0";
     mirror.style.maxHeight = "none";
@@ -1110,6 +1421,10 @@ export default function WorkEditor({
       />
       <div className="brand-editor mt-8 overflow-visible rounded-xl border border-[#383838] bg-[#1e1e1e]">
         <div ref={editorBodyRef} className="relative">
+          <RichTextToolbar
+            editorRef={editorRef}
+            onFormat={handleFormattedChange}
+          />
           <SuggestionPopup
             suggestions={suggestions}
             suggestionRange={suggestionRange}
@@ -1120,16 +1435,36 @@ export default function WorkEditor({
             onChooseSuggestion={chooseSuggestion}
           />
 
+          <div
+            ref={editorRef}
+            contentEditable
+            suppressContentEditableWarning
+            role="textbox"
+            aria-label="Document content"
+            aria-multiline="true"
+            onInput={handleEditorInput}
+            onPaste={handleEditorPaste}
+            onDrop={(event) => event.preventDefault()}
+            onKeyDown={(event) => {
+              syncEditorSelection();
+              handleContentKeyDown(event);
+            }}
+            onClick={() => {
+              handleEditorSelection();
+              void handleEditorClick();
+            }}
+            onKeyUp={handleEditorSelection}
+            onMouseUp={handleEditorSelection}
+            onScroll={updatePopupPosition}
+            data-placeholder="Start writing..."
+            className="rich-text-editor min-h-[650px] w-full whitespace-pre-wrap break-words bg-transparent p-6 text-base leading-8 text-[#d4d4d4] outline-none"
+          />
           <textarea
             ref={textareaRef}
-            value={content}
-            onChange={(event) => handleContentChange(event.target.value)}
-            onKeyDown={handleContentKeyDown}
-            onClick={() => void handleEditorClick()}
-            onSelect={handleSelectionChange}
-            onScroll={updatePopupPosition}
-            placeholder="Start writing..."
-            className="min-h-[650px] w-full resize-none bg-transparent p-6 text-base leading-8 text-[#d4d4d4] outline-none placeholder:text-[#6e7681]"
+            aria-hidden="true"
+            tabIndex={-1}
+            defaultValue={initialContent}
+            className="pointer-events-none absolute h-px w-px resize-none opacity-0"
           />
         </div>
       </div>
