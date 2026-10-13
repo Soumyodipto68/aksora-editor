@@ -17,6 +17,7 @@ type PopupPosition = {
 
 type SuggestionPopupProps = {
   suggestions: string[];
+  isLoading: boolean;
   suggestionRange: SuggestionRange | null;
   activeSuggestion: number;
   popupPosition: PopupPosition;
@@ -27,6 +28,7 @@ type SuggestionPopupProps = {
 
 export default function SuggestionPopup({
   suggestions,
+  isLoading,
   suggestionRange,
   activeSuggestion,
   popupPosition,
@@ -34,7 +36,7 @@ export default function SuggestionPopup({
   onActiveSuggestionChange,
   onChooseSuggestion,
 }: SuggestionPopupProps) {
-  if (suggestions.length === 0 || !suggestionRange) {
+  if ((!suggestions.length && !isLoading) || !suggestionRange) {
     return null;
   }
 
@@ -48,12 +50,23 @@ export default function SuggestionPopup({
       }}
     >
       <div className="flex items-center justify-between border-b border-[#383838] px-2.5 py-1.5 text-[10px] text-[#999999]">
-        <span>Suggestions</span>
-        <span>
-          {activeSuggestion + 1}/{suggestions.length}
-        </span>
+        <span>{isLoading ? "Finding Bengali suggestions..." : "Suggestions"}</span>
+        {!isLoading && (
+          <span>
+            {activeSuggestion + 1}/{suggestions.length}
+          </span>
+        )}
       </div>
 
+      {isLoading ? (
+        <div
+          role="status"
+          className="flex items-center gap-2 px-3 py-3 text-xs text-[#b5b5b5]"
+        >
+          <span className="h-3 w-3 animate-spin rounded-full border border-[#555] border-t-sky-400" />
+          Transliteration suggestions
+        </div>
+      ) : (
       <div className="max-h-40 overflow-y-auto py-1">
         {suggestions.map((candidate, index) => {
           const isEnglish = candidate === suggestionRange.source;
@@ -92,10 +105,13 @@ export default function SuggestionPopup({
           );
         })}
       </div>
+      )}
 
-      <div className="border-t border-[#383838] px-2.5 py-1 text-[10px] text-[#858585]">
-        ↑↓ Navigate · Enter Select · Esc Close
-      </div>
+      {!isLoading && (
+        <div className="border-t border-[#383838] px-2.5 py-1 text-[10px] text-[#858585]">
+          ↑↓ Navigate · Enter Select · Esc Close
+        </div>
+      )}
     </div>
   );
 }

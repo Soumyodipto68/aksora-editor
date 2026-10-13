@@ -39,6 +39,11 @@ export default function WorkEditorHeader({
           type="button"
           aria-pressed={bengaliTyping}
           onClick={onToggleBengaliTyping}
+          title={
+            bengaliTyping
+              ? "Type an English word and press Space to convert it to Bengali"
+              : "Enable Bengali typing to convert English words"
+          }
           className={`rounded-full border px-3 py-1.5 text-xs transition ${
             bengaliTyping
               ? "border-sky-700/70 bg-sky-950/50 text-sky-200"
@@ -47,6 +52,11 @@ export default function WorkEditorHeader({
         >
           বাংলা {bengaliTyping ? "On" : "Off"}
         </button>
+        {bengaliTyping && (
+          <span className="hidden text-xs text-zinc-500 lg:inline">
+            Type English, press Space → বাংলা
+          </span>
+        )}
 
         <span
           role="status"

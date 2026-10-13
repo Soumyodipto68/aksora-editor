@@ -4,6 +4,7 @@ import LogoutButton from "./LogoutButton";
 import Link from "next/link";
 import Logo from "@/components/Logo";
 import WorkspaceSearch from "./WorkspaceSearch";
+import UserAvatar from "./UserAvatar";
 
 type Work = {
   id: string;
@@ -62,17 +63,7 @@ export default function Sidebar({
       {/* User profile and logout */}
       <div className="border-t border-zinc-800 p-3">
         <div className="flex items-center gap-2 rounded-md px-2 py-2">
-          {user.image ? (
-            <img
-              src={user.image}
-              alt={user.name ?? "User"}
-              className="h-8 w-8 rounded-full object-cover"
-            />
-          ) : (
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-xs font-semibold text-zinc-300">
-              {(user.name?.[0] ?? "U").toUpperCase()}
-            </div>
-          )}
+          <UserAvatar image={user.image} name={user.name} />
 
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm text-zinc-200">

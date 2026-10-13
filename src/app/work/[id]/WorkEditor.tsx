@@ -56,7 +56,7 @@ type TextChange = {
 };
 
 const DELIMITERS = /^[ \n,.;?!:]$/;
-const TRANSLITERATION_DELAY = 250;
+const SUGGESTION_DEBOUNCE_MS = 60;
 
 function getTextChange(previous: string, next: string): TextChange {
   let start = 0;
@@ -210,6 +210,7 @@ export default function WorkEditor({
   );
 
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [suggestionRange, setSuggestionRange] =
     useState<SuggestionRange | null>(null);
   const suggestionRangeRef = useRef<SuggestionRange | null>(null);
@@ -305,6 +306,7 @@ export default function WorkEditor({
   function clearSuggestions() {
     suggestionRequestIdRef.current++;
     setSuggestions([]);
+    setSuggestionsLoading(false);
     suggestionRangeRef.current = null;
     setSuggestionRange(null);
     setActiveSuggestion(0);
@@ -466,15 +468,22 @@ export default function WorkEditor({
     }
 
     const { selectionStart, selectionEnd } = textareaRef.current;
+    const collapsed = selectionStart === selectionEnd;
+    const caretInConvertedWord =
+      suggestionRange.source !== suggestionRange.displayed &&
+      collapsed &&
+      selectionStart >= suggestionRange.start &&
+      selectionStart <= suggestionRange.end;
+    const caretAtRomanWordEnd =
+      suggestionRange.source === suggestionRange.displayed &&
+      collapsed &&
+      selectionStart === suggestionRange.end;
     const caretAfterDelimiter =
-      selectionStart === selectionEnd &&
+      collapsed &&
       selectionStart === suggestionRange.end + 1 &&
       DELIMITERS.test(contentRef.current[suggestionRange.end] ?? "");
 
-    if (
-      selectionStart < suggestionRange.start ||
-      (selectionEnd > suggestionRange.end && !caretAfterDelimiter)
-    ) {
+    if (!caretAtRomanWordEnd && !caretInConvertedWord && !caretAfterDelimiter) {
       clearSuggestions();
     }
   }
@@ -710,7 +719,7 @@ export default function WorkEditor({
     }
   }
 
-  // Show suggestions after a consistent 250 ms pause.
+  // Wait briefly for a pause before asking the model for suggestions.
   // Ignore outdated requests without blocking the editor.
   function scheduleAutomaticTransliteration(value: string) {
     if (transliterationTimeout.current) {
@@ -743,6 +752,16 @@ export default function WorkEditor({
     const start = cursor - word.length;
     const requestId = ++suggestionRequestIdRef.current;
 
+    setSuggestions([]);
+    setSuggestionsLoading(true);
+    setActiveSuggestion(0);
+    updateSuggestionRange({
+      start,
+      end: cursor,
+      source: word,
+      displayed: word,
+    });
+
     transliterationTimeout.current = setTimeout(async () => {
       const currentTextarea = textareaRef.current;
 
@@ -754,6 +773,9 @@ export default function WorkEditor({
         currentTextarea.selectionStart !== cursor ||
         currentTextarea.selectionEnd !== cursor
       ) {
+        if (requestId === suggestionRequestIdRef.current) {
+          setSuggestionsLoading(false);
+        }
         return;
       }
 
@@ -780,6 +802,7 @@ export default function WorkEditor({
         const options = [...new Set([...candidates, word])];
 
         setSuggestions(options);
+        setSuggestionsLoading(false);
         setActiveSuggestion(0);
 
         updateSuggestionRange({
@@ -790,8 +813,12 @@ export default function WorkEditor({
         });
       } catch (error) {
         console.error("Transliteration suggestions failed:", error);
+        if (requestId === suggestionRequestIdRef.current) {
+          setSuggestions([word]);
+          setSuggestionsLoading(false);
+        }
       }
-    }, TRANSLITERATION_DELAY);
+    }, SUGGESTION_DEBOUNCE_MS);
   }
 
   // Commit completed words independently so rapid typing cannot invalidate
@@ -831,19 +858,8 @@ export default function WorkEditor({
 
     pendingConversionsRef.current.push(conversion);
 
-    conversion.timer = setTimeout(() => {
-      const pending = pendingConversionsRef.current.find(
-        ({ id }) => id === conversion.id,
-      );
-
-      if (!pending || !bengaliTypingRef.current) {
-        return;
-      }
-
-      pending.timer = null;
-
-      void getCandidates(word)
-        .then((candidates) => {
+    void getCandidates(word)
+      .then((candidates) => {
           const pendingIndex = pendingConversionsRef.current.findIndex(
             ({ id }) => id === conversion.id,
           );
@@ -944,8 +960,8 @@ export default function WorkEditor({
           }
 
           updateContent(nextContent);
-        })
-        .catch((error: unknown) => {
+      })
+      .catch((error: unknown) => {
           const pendingIndex = pendingConversionsRef.current.findIndex(
             ({ id }) => id === conversion.id,
           );
@@ -953,10 +969,8 @@ export default function WorkEditor({
           if (pendingIndex >= 0) {
             pendingConversionsRef.current.splice(pendingIndex, 1);
           }
-
           console.error("Boundary transliteration failed:", error);
-        });
-    }, TRANSLITERATION_DELAY);
+      });
   }
 
   function handleContentChange(value: string, editorAlreadyUpdated = false) {
@@ -965,43 +979,45 @@ export default function WorkEditor({
     const previous = contentRef.current;
     const activeWord = activeWordRef.current;
 
-    // Restore the Roman spelling if the user continues typing
-    // a word after it has already been converted.
     if (activeWord) {
-      const prefix = previous.slice(0, activeWord.start);
-      const convertedPrefix = prefix + activeWord.converted;
+      const change = getTextChange(previous, value);
+      const convertedEnd = activeWord.start + activeWord.converted.length;
+      const insertedText = value.slice(change.start, change.newEnd);
 
-      if (value.startsWith(convertedPrefix)) {
-        const appendedText = value.slice(convertedPrefix.length);
+      if (
+        change.start === convertedEnd &&
+        change.oldEnd === convertedEnd &&
+        insertedText.length > 0 &&
+        /^[A-Za-z]+$/.test(insertedText)
+      ) {
+        const restored =
+          value.slice(0, activeWord.start) +
+          activeWord.roman +
+          insertedText +
+          value.slice(change.newEnd);
+        const restoredCaret =
+          change.newEnd + activeWord.roman.length - activeWord.converted.length;
 
-        if (appendedText.length > 0 && /^[A-Za-z]+$/.test(appendedText)) {
-          const restored = prefix + activeWord.roman + appendedText;
-
-          activeWordRef.current = null;
-          suggestionRequestIdRef.current++;
-          clearSuggestions();
-
-          const change = getTextChange(previous, restored);
-          updatePendingConversionPositions(
-            change.start,
-            change.oldEnd,
-            change.newEnd,
-          );
-          updateConvertedWordPositions(previous, restored);
-          const restoredCaret =
-            prefix.length + activeWord.roman.length + appendedText.length;
-          pendingSelection.current = {
-            start: restoredCaret,
-            end: restoredCaret,
-          };
-          if (editorRef.current) {
-            replaceEditorText(value, restored, editorRef.current);
-          }
-          updateContent(restored, true);
-          scheduleAutomaticTransliteration(restored);
-
-          return;
+        activeWordRef.current = null;
+        clearSuggestions();
+        updatePendingConversionPositions(
+          change.start,
+          change.oldEnd,
+          change.newEnd,
+        );
+        updateConvertedWordPositions(previous, value);
+        updateConvertedWordPositions(value, restored);
+        pendingSelection.current = {
+          start: restoredCaret,
+          end: restoredCaret,
+        };
+        if (editorRef.current) {
+          replaceEditorText(value, restored, editorRef.current);
         }
+        updateContent(restored, true);
+        scheduleAutomaticTransliteration(restored);
+
+        return;
       }
 
       activeWordRef.current = null;
@@ -1294,56 +1310,65 @@ export default function WorkEditor({
 
     const editorRect = editor.getBoundingClientRect();
     const wrapperRect = wrapper.getBoundingClientRect();
-    const computed = window.getComputedStyle(editor);
+    const selection = window.getSelection();
+    const selectionRange = selection?.rangeCount
+      ? selection.getRangeAt(0)
+      : null;
+    let markerRect =
+      selectionRange?.collapsed &&
+      editor.contains(selectionRange.startContainer)
+        ? selectionRange.getBoundingClientRect()
+        : null;
 
-    const mirror = document.createElement("div");
+    if (!markerRect || (!markerRect.width && !markerRect.height)) {
+      const computed = window.getComputedStyle(editor);
+      const mirror = document.createElement("div");
 
-    const properties = [
-      "boxSizing",
-      "width",
-      "fontFamily",
-      "fontSize",
-      "fontWeight",
-      "fontStyle",
-      "letterSpacing",
-      "lineHeight",
-      "textAlign",
-      "textIndent",
-      "textTransform",
-      "padding",
-      "border",
-      "whiteSpace",
-      "overflowWrap",
-      "wordBreak",
-      "tabSize",
-    ] as const;
+      const properties = [
+        "boxSizing",
+        "width",
+        "fontFamily",
+        "fontSize",
+        "fontWeight",
+        "fontStyle",
+        "letterSpacing",
+        "lineHeight",
+        "textAlign",
+        "textIndent",
+        "textTransform",
+        "padding",
+        "border",
+        "whiteSpace",
+        "overflowWrap",
+        "wordBreak",
+        "tabSize",
+      ] as const;
 
-    for (const property of properties) {
-      mirror.style[property] = computed[property];
+      for (const property of properties) {
+        mirror.style[property] = computed[property];
+      }
+
+      mirror.style.position = "fixed";
+      mirror.style.left = `${editorRect.left}px`;
+      mirror.style.top = `${editorRect.top}px`;
+      mirror.style.height = "auto";
+      mirror.style.minHeight = "0";
+      mirror.style.maxHeight = "none";
+      mirror.style.overflow = "hidden";
+      mirror.style.visibility = "hidden";
+      mirror.style.pointerEvents = "none";
+
+      const textNode = document.createTextNode(textBeforeCaret);
+      const marker = document.createElement("span");
+
+      marker.textContent = "\u200b";
+
+      mirror.appendChild(textNode);
+      mirror.appendChild(marker);
+      document.body.appendChild(mirror);
+      markerRect = marker.getBoundingClientRect();
+      document.body.removeChild(mirror);
     }
-
-    mirror.style.position = "fixed";
-    mirror.style.left = `${editorRect.left}px`;
-    mirror.style.top = `${editorRect.top}px`;
-    mirror.style.height = "auto";
-    mirror.style.minHeight = "0";
-    mirror.style.maxHeight = "none";
-    mirror.style.overflow = "hidden";
-    mirror.style.visibility = "hidden";
-    mirror.style.pointerEvents = "none";
-
-    const textNode = document.createTextNode(textBeforeCaret);
-    const marker = document.createElement("span");
-
-    marker.textContent = "\u200b";
-
-    mirror.appendChild(textNode);
-    mirror.appendChild(marker);
-    document.body.appendChild(mirror);
-
-    const markerRect = marker.getBoundingClientRect();
-
-    document.body.removeChild(mirror);
 
     const popupHeight = popupRef.current?.offsetHeight ?? 150;
     const popupWidth = popupRef.current?.offsetWidth ?? 280;
@@ -1379,7 +1404,7 @@ export default function WorkEditor({
   }, [suggestionRange]);
 
   useLayoutEffect(() => {
-    if (!suggestions.length || !suggestionRange) {
+    if ((!suggestions.length && !suggestionsLoading) || !suggestionRange) {
       return;
     }
 
@@ -1394,6 +1419,7 @@ export default function WorkEditor({
     };
   }, [
     suggestions,
+    suggestionsLoading,
     suggestionRange,
     content,
     activeSuggestion,
@@ -1427,6 +1453,7 @@ export default function WorkEditor({
           />
           <SuggestionPopup
             suggestions={suggestions}
+            isLoading={suggestionsLoading}
             suggestionRange={suggestionRange}
             activeSuggestion={activeSuggestion}
             popupPosition={popupPosition}
