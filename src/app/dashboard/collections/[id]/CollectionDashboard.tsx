@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Toast from "@/components/Toast";
+import { richContentToText } from "@/lib/rich-content";
 
 type Work = {
   id: string;
@@ -407,7 +408,7 @@ export default function CollectionDashboard({
                   <h2 className="font-medium text-zinc-100">{work.title}</h2>
 
                   <p className="mt-2 line-clamp-2 text-sm leading-6 text-zinc-500">
-                    {work.content || "No content yet."}
+                    {richContentToText(work.content) || "No content yet."}
                   </p>
                 </Link>
 
@@ -481,7 +482,7 @@ export default function CollectionDashboard({
                         </p>
 
                         <p className="mt-1 line-clamp-1 text-xs text-zinc-600">
-                          {work.content || "No content yet."}
+                          {richContentToText(work.content) || "No content yet."}
                         </p>
                       </div>
 

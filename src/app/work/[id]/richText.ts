@@ -1,4 +1,6 @@
-export const RICH_TEXT_PREFIX = "<!--benglish-editor-rich-text-v1-->";
+import { RICH_TEXT_PREFIX } from "@/lib/rich-content";
+
+export { RICH_TEXT_PREFIX };
 
 const ALLOWED_TAGS = new Set([
   "B",

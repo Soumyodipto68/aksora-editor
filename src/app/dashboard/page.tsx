@@ -6,6 +6,7 @@ import NewWorkButton from "./components/NewWorkButton";
 import WorkActions from "./components/WorkActions";
 import ImportWorkButton from "./components/ImportWorkButton";
 import { ThemeToggle } from "@/components/ThemeProvider";
+import { richContentToText } from "@/lib/rich-content";
 
 type DashboardPageProps = {
   searchParams: Promise<{
@@ -224,7 +225,7 @@ if (!session?.user?.id) {
                   </div>
 
                   <p className="mt-3 line-clamp-3 text-sm text-zinc-500">
-                    {work.content || "No content yet."}
+                    {richContentToText(work.content) || "No content yet."}
                   </p>
 
                   <p className="mt-4 text-xs text-zinc-600">

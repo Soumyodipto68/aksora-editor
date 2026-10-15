@@ -1,27 +1,13 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { RICH_TEXT_PREFIX } from "@/app/work/[id]/richText";
+import { richContentToText } from "@/lib/rich-content";
 import { NextResponse } from "next/server";
 
 const MAX_QUERY_LENGTH = 100;
 const MAX_RESULTS = 40;
 
 function searchableText(content: string) {
-  if (!content.startsWith(RICH_TEXT_PREFIX)) {
-    return content;
-  }
-
-  return content
-    .slice(RICH_TEXT_PREFIX.length)
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/(div|p|li|ul|ol|blockquote)>/gi, "\n")
-    .replace(/<[^>]*>/g, "")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'");
+  return richContentToText(content);
 }
 
 function createSnippet(content: string, query: string) {
