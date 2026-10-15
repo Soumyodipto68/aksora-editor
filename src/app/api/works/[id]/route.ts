@@ -23,9 +23,22 @@ export async function PATCH(request: Request, { params }: RouteContext) {
 
     const title =
       typeof body.title === "string" ? body.title.trim() : undefined;
+    const folderId =
+      typeof body.folderId === "string" ? body.folderId.trim() : undefined;
 
-    if (content === undefined && title === undefined) {
+    if (
+      content === undefined &&
+      title === undefined &&
+      folderId === undefined
+    ) {
       return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
+    }
+
+    if (folderId !== undefined && !folderId) {
+      return NextResponse.json(
+        { error: "Folder ID is required" },
+        { status: 400 },
+      );
     }
 
     const existingWork = await prisma.work.findFirst({
@@ -39,6 +52,23 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       return NextResponse.json({ error: "Work not found" }, { status: 404 });
     }
 
+    if (folderId !== undefined) {
+      const folder = await prisma.folder.findFirst({
+        where: {
+          id: folderId,
+          userId: session.user.id,
+        },
+        select: { id: true },
+      });
+
+      if (!folder) {
+        return NextResponse.json(
+          { error: "Folder not found" },
+          { status: 404 },
+        );
+      }
+    }
+
     const work = await prisma.work.update({
       where: {
         id: existingWork.id,
@@ -46,6 +76,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       data: {
         ...(content !== undefined && { content }),
         ...(title !== undefined && { title }),
+        ...(folderId !== undefined && { folderId }),
       },
       select: {
         id: true,
