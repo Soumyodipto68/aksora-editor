@@ -153,13 +153,38 @@ export const TRANSLITERATION_TEST_CASES: TransliterationTestCase[] = [
     category: "common words",
   },
   {
+    input: "okhane",
+    expected: "ওখানে",
+    category: "common words",
+  },
+  {
+    input: "ekhane",
+    expected: "এখানে",
+    category: "common words",
+  },
+  {
+    input: "sekhane",
+    expected: "সেখানে",
+    category: "common words",
+  },
+  {
+    input: "hoy",
+    expected: "হয়",
+    category: "common words",
+  },
+  {
+    input: "jodi",
+    expected: "যদি",
+    category: "common words",
+  },
+  {
     input: "sob",
     expected: "সব",
     category: "common words",
   },
   {
     input: "shob",
-    expected: "শব",
+    expected: "সব",
     category: "common words",
   },
 

@@ -20,12 +20,14 @@ function resolveVowel(
    * INDEPENDENT A
    * --------------------------------------------------
    *
-   * a    → অ
-   * aa   → আ
-   *
-   * Existing baseline behavior.
+   * A standalone "a" is অ, while initial "a" in a word such as
+   * ami or ache is pronounced আ.
    */
   if (syllable.consonant === null && vowel === "a") {
+    if (index === 0 && syllables.length > 1) {
+      return "aa";
+    }
+
     return "a";
   }
 

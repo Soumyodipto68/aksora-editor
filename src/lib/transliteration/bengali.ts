@@ -4,6 +4,26 @@ import { resolveConsonants } from "./consonant-context";
 import { resolveVowels } from "./vowel-context";
 import { renderSyllables } from "./render";
 
+const WORD_OVERRIDES: Record<string, string> = {
+  ekhane: "এখানে",
+  eta: "এটা",
+  hoy: "হয়",
+  hobe: "হবে",
+  hoye: "হয়ে",
+  jodi: "যদি",
+  okhane: "ওখানে",
+  sekhane: "সেখানে",
+  seta: "সেটা",
+  shob: "সব",
+  shobai: "সবাই",
+  sob: "সব",
+  sobai: "সবাই",
+  kirokom: "কিরকম",
+  kothao: "কোথাও",
+  bharat: "ভারত",
+  soumyodipto: "সৌম্যদীপ্ত",
+};
+
 function transliteratePart(
   part: string,
 ): string {
@@ -27,6 +47,11 @@ function transliteratePart(
   }
 
   const [, word, suffix] = match;
+  const override = WORD_OVERRIDES[word.toLowerCase()];
+
+  if (override) {
+    return override + suffix;
+  }
 
   const normalized =
     normalizePhoneticWord(word);
@@ -81,4 +106,38 @@ export function transliterateBengali(
       return transliteratePart(part);
     })
     .join("");
+}
+
+const SPELLING_VARIANTS: Array<{
+  pattern: RegExp;
+  replacement: string;
+}> = [
+  { pattern: /sh/i, replacement: "s" },
+  { pattern: /s/i, replacement: "sh" },
+  { pattern: /chh/i, replacement: "ch" },
+  { pattern: /ch/i, replacement: "chh" },
+  { pattern: /aa/i, replacement: "a" },
+  { pattern: /a/i, replacement: "aa" },
+  { pattern: /ii/i, replacement: "i" },
+  { pattern: /i/i, replacement: "ii" },
+  { pattern: /uu/i, replacement: "u" },
+  { pattern: /u/i, replacement: "uu" },
+];
+
+export function transliterateBengaliCandidates(input: string): string[] {
+  const candidates = new Set<string>([transliterateBengali(input)]);
+
+  for (const { pattern, replacement } of SPELLING_VARIANTS) {
+    const variant = input.replace(pattern, replacement);
+
+    if (variant !== input) {
+      candidates.add(transliterateBengali(variant));
+    }
+
+    if (candidates.size >= 6) {
+      break;
+    }
+  }
+
+  return [...candidates];
 }

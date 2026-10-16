@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import path from "node:path";
 import { IndicTransliterator } from "@cloudrumbles/indic-transliterate";
+import { transliterateBengaliCandidates } from "@/lib/transliteration/bengali";
 
 export const runtime = "nodejs";
 
@@ -43,6 +44,18 @@ const resultCache = new Map<string, string[]>();
 
 const MAX_CACHE_SIZE = 5000;
 const MAX_WORD_LENGTH = 100;
+
+function cacheCandidates(key: string, candidates: string[]) {
+  if (resultCache.size >= MAX_CACHE_SIZE) {
+    const oldestKey = resultCache.keys().next().value;
+
+    if (oldestKey !== undefined) {
+      resultCache.delete(oldestKey);
+    }
+  }
+
+  resultCache.set(key, candidates);
+}
 
 export async function POST(request: Request) {
   try {
@@ -105,6 +118,34 @@ export async function POST(request: Request) {
       });
     }
 
+    if (language === "bn") {
+      const localCandidates = transliterateBengaliCandidates(word);
+      let modelCandidates: string[] = [];
+
+      try {
+        modelCandidates = await transliterator.transliterate(word, language, 5);
+      } catch (error) {
+        console.error(
+          "Bengali model transliteration failed; using local rules:",
+          error,
+        );
+      }
+
+      const candidates = [
+        ...new Set([...modelCandidates, ...localCandidates, word]),
+      ].filter((candidate) => candidate.trim().length > 0);
+      const converted =
+        modelCandidates[0] ?? localCandidates[0] ?? word;
+      cacheCandidates(cacheKey, candidates);
+
+      return NextResponse.json({
+        word,
+        language,
+        converted,
+        candidates,
+      });
+    }
+
     const modelCandidates = await transliterator.transliterate(
       word,
       language,
@@ -126,16 +167,7 @@ export async function POST(request: Request) {
       candidates.push(word);
     }
 
-    // Avoid unbounded cache growth.
-    if (resultCache.size >= MAX_CACHE_SIZE) {
-      const oldestKey = resultCache.keys().next().value;
-
-      if (oldestKey !== undefined) {
-        resultCache.delete(oldestKey);
-      }
-    }
-
-    resultCache.set(cacheKey, candidates);
+    cacheCandidates(cacheKey, candidates);
 
     return NextResponse.json({
       word,

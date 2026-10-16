@@ -36,6 +36,14 @@ type WorkClipboard = {
   sourceFolderId: string;
 };
 
+type PendingWorkMove = {
+  workId: string;
+  title: string;
+  sourceFolderId?: string;
+  folderId: string;
+  folderName: string;
+};
+
 function FolderItem({
   folder,
   level,
@@ -62,6 +70,8 @@ function FolderItem({
     workId: string,
     folderId: string,
     sourceFolderId?: string,
+    workTitle?: string,
+    folderName?: string,
   ) => void;
   isBusy: boolean;
   openWorkMenuId: string | null;
@@ -92,9 +102,12 @@ function FolderItem({
     const sourceFolderId = event.dataTransfer.getData(
       "application/x-benglish-source-folder",
     );
+    const workTitle = event.dataTransfer.getData(
+      "application/x-benglish-work-title",
+    );
 
     if (workId) {
-      onMoveWork(workId, folder.id, sourceFolderId);
+      onMoveWork(workId, folder.id, sourceFolderId, workTitle, folder.name);
     }
   }
 
@@ -233,6 +246,10 @@ function FolderItem({
                       "application/x-benglish-source-folder",
                       folder.id,
                     );
+                    event.dataTransfer.setData(
+                      "application/x-benglish-work-title",
+                      work.title,
+                    );
                     event.dataTransfer.effectAllowed = "move";
                   }}
                   className={`flex min-w-0 flex-1 items-center gap-2 py-1.5 ${
@@ -313,7 +330,26 @@ export default function Explorer({
   const [isBusy, setIsBusy] = useState(false);
   const [openWorkMenuId, setOpenWorkMenuId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState("");
+  const [pendingMove, setPendingMove] = useState<PendingWorkMove | null>(null);
   const rootFolders = folders.filter((folder) => folder.parentId === null);
+
+  function requestWorkMove(
+    workId: string,
+    folderId: string,
+    sourceFolderId?: string,
+    title?: string,
+    folderName?: string,
+  ) {
+    if (isBusy || sourceFolderId === folderId) return;
+
+    setPendingMove({
+      workId,
+      title: title || "this file",
+      sourceFolderId,
+      folderId,
+      folderName: folderName || "the selected folder",
+    });
+  }
 
   async function updateWorkFolder(
     workId: string,
@@ -446,7 +482,7 @@ export default function Explorer({
               clipboard={clipboard}
               onClipboardChange={setClipboard}
               onPaste={pasteWork}
-              onMoveWork={updateWorkFolder}
+              onMoveWork={requestWorkMove}
               isBusy={isBusy}
               openWorkMenuId={openWorkMenuId}
               onWorkMenuChange={setOpenWorkMenuId}
@@ -459,10 +495,29 @@ export default function Explorer({
           Choose a folder and select Paste here.
         </p>
       )}
-      {toastMessage && (
+      {toastMessage && !pendingMove && (
         <Toast
           message={toastMessage}
           onDismiss={() => setToastMessage("")}
+        />
+      )}
+      {pendingMove && (
+        <Toast
+          message={`Move "${pendingMove.title}" to "${pendingMove.folderName}"?`}
+          variant="confirm"
+          duration={0}
+          actionLabel="Move"
+          cancelLabel="Cancel"
+          onAction={() => {
+            const move = pendingMove;
+            setPendingMove(null);
+            void updateWorkFolder(
+              move.workId,
+              move.folderId,
+              move.sourceFolderId,
+            );
+          }}
+          onDismiss={() => setPendingMove(null)}
         />
       )}
     </div>

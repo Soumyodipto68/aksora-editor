@@ -16,6 +16,7 @@ import {
   decodeRichContent,
   encodeRichContent,
 } from "./richText";
+import { transliterateBengaliCandidates } from "@/lib/transliteration/bengali";
 
 type WorkEditorProps = {
   workId: string;
@@ -244,9 +245,11 @@ export default function WorkEditor({
   // Tracks words converted during the current editing session.
   const convertedWordsRef = useRef<ActiveWord[]>([]);
 
-  // Cache results and deduplicate simultaneous requests.
+  // Cache local transliteration results for repeated words.
   const candidateCache = useRef(new Map<string, string[]>());
-  const candidateRequests = useRef(new Map<string, Promise<string[]>>());
+  const modelCandidateRequests = useRef(
+    new Map<string, Promise<string[]>>(),
+  );
 
   useEffect(() => {
     return () => {
@@ -548,7 +551,17 @@ export default function WorkEditor({
       return cached;
     }
 
-    const pending = candidateRequests.current.get(cacheKey);
+    const candidates = [
+      ...new Set([...transliterateBengaliCandidates(word), word]),
+    ];
+    candidateCache.current.set(cacheKey, candidates);
+    return candidates;
+  }
+
+  async function getModelCandidates(word: string): Promise<string[]> {
+    const cacheKey = `bn:${word.toLowerCase()}`;
+    const pending = modelCandidateRequests.current.get(cacheKey);
+
     if (pending) {
       return pending;
     }
@@ -556,48 +569,36 @@ export default function WorkEditor({
     const request = (async () => {
       const response = await fetch("/api/transliterate", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          word,
-          language: "bn",
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ word, language: "bn" }),
       });
 
       if (!response.ok) {
-        throw new Error("Transliteration request failed");
+        throw new Error("AI transliteration request failed");
       }
 
-      const result: {
-        candidates?: string[];
-        converted?: string;
-      } = await response.json();
-
-      const values = [
-        ...new Set(
-          (result.candidates ?? [result.converted ?? word]).filter(
-            (candidate) =>
-              typeof candidate === "string" && candidate.length > 0,
-          ),
-        ),
-      ];
-
-      // Keep the original Roman spelling available as an option.
-      if (!values.includes(word)) {
-        values.push(word);
-      }
-
-      candidateCache.current.set(cacheKey, values);
-      return values;
+      const result: { candidates?: string[] } = await response.json();
+      const local = await getCandidates(word);
+      const candidates = [
+        ...new Set([
+          ...(result.candidates ?? []),
+          ...local,
+          word,
+        ]),
+      ].filter((candidate) => candidate.length > 0);
+      candidateCache.current.set(cacheKey, candidates);
+      return candidates;
     })();
 
-    candidateRequests.current.set(cacheKey, request);
+    modelCandidateRequests.current.set(cacheKey, request);
 
     try {
       return await request;
+    } catch (error) {
+      console.warn("Using local Bengali transliteration suggestions:", error);
+      return await getCandidates(word);
     } finally {
-      candidateRequests.current.delete(cacheKey);
+      modelCandidateRequests.current.delete(cacheKey);
     }
   }
 
@@ -781,7 +782,6 @@ export default function WorkEditor({
 
       try {
         const candidates = await getCandidates(word);
-
         const latestTextarea = textareaRef.current;
         const current = contentRef.current;
 
@@ -810,6 +810,24 @@ export default function WorkEditor({
           end: start + word.length,
           source: word,
           displayed: word,
+        });
+
+        void getModelCandidates(word).then((modelOptions) => {
+          const currentTextarea = textareaRef.current;
+
+          if (
+            requestId !== suggestionRequestIdRef.current ||
+            !bengaliTypingRef.current ||
+            !currentTextarea ||
+            contentRef.current !== value ||
+            currentTextarea.selectionStart !== cursor ||
+            currentTextarea.selectionEnd !== cursor ||
+            contentRef.current.slice(start, start + word.length) !== word
+          ) {
+            return;
+          }
+
+          setSuggestions([...new Set([...modelOptions, word])]);
         });
       } catch (error) {
         console.error("Transliteration suggestions failed:", error);
@@ -1161,6 +1179,26 @@ export default function WorkEditor({
       const currentIndex = options.indexOf(expectedText);
 
       setActiveSuggestion(currentIndex >= 0 ? currentIndex : 0);
+
+      void getModelCandidates(word.roman).then((modelOptions) => {
+        const latestContent = contentRef.current;
+
+        if (
+          requestId !== suggestionRequestIdRef.current ||
+          !bengaliTypingRef.current ||
+          latestContent.slice(
+            word.start,
+            word.start + expectedText.length,
+          ) !== expectedText
+        ) {
+          return;
+        }
+
+        const mergedOptions = [...new Set([...modelOptions, word.roman])];
+        setSuggestions(mergedOptions);
+        const updatedIndex = mergedOptions.indexOf(expectedText);
+        setActiveSuggestion(updatedIndex >= 0 ? updatedIndex : 0);
+      });
     } catch (error) {
       console.error("Could not load word suggestions:", error);
     }
