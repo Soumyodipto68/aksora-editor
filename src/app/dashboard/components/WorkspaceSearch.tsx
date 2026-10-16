@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 
 type SearchResult = {
   id: string;
@@ -13,6 +13,7 @@ type SearchResult = {
 export default function WorkspaceSearch() {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  const resultsRef = useRef<HTMLDivElement>(null);
   const [searchResponse, setSearchResponse] = useState<{
     query: string;
     results?: SearchResult[];
@@ -90,6 +91,56 @@ export default function WorkspaceSearch() {
   const hasSearched =
     searchResponse?.query === normalizedQuery && !searchResponse.error;
 
+  function getResultLinks() {
+    return Array.from(
+      resultsRef.current?.querySelectorAll<HTMLAnchorElement>(
+        "[data-search-result]",
+      ) ?? [],
+    );
+  }
+
+  function handleSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "ArrowDown") {
+      const firstResult = getResultLinks()[0];
+
+      if (firstResult) {
+        event.preventDefault();
+        firstResult.focus();
+      }
+    }
+  }
+
+  function handleResultKeyDown(
+    event: KeyboardEvent<HTMLAnchorElement>,
+    index: number,
+  ) {
+    const links = getResultLinks();
+
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      const nextIndex =
+        event.key === "ArrowDown" ? index + 1 : index - 1;
+
+      if (nextIndex >= 0 && nextIndex < links.length) {
+        links[nextIndex].focus();
+      } else if (event.key === "ArrowUp" && index === 0) {
+        document.getElementById("workspace-search")?.focus();
+      }
+      return;
+    }
+
+    if (event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      links[event.key === "Home" ? 0 : links.length - 1]?.focus();
+      return;
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      document.getElementById("workspace-search")?.focus();
+    }
+  }
+
   return (
     <div className="relative z-20 border-b border-zinc-900 p-3">
       <label htmlFor="workspace-search" className="sr-only">
@@ -121,6 +172,7 @@ export default function WorkspaceSearch() {
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={handleSearchKeyDown}
           placeholder="Search your writing..."
           autoComplete="off"
           maxLength={100}
@@ -152,6 +204,7 @@ export default function WorkspaceSearch() {
 
       {normalizedQuery && (
         <div
+          ref={resultsRef}
           className="absolute inset-x-3 top-full mt-2 max-h-[min(60vh,420px)] overflow-y-auto rounded-xl border border-zinc-800 bg-zinc-950 p-1.5 shadow-2xl shadow-black/40"
           role="region"
           aria-label="Search results"
@@ -179,10 +232,12 @@ export default function WorkspaceSearch() {
                   ? "TOP 40 MATCHES"
                   : `${results.length} ${results.length === 1 ? "MATCH" : "MATCHES"}`}
               </p>
-              {results.map((result) => (
+              {results.map((result, index) => (
                 <Link
                   key={result.id}
                   href={`/work/${result.id}`}
+                  data-search-result
+                  onKeyDown={(event) => handleResultKeyDown(event, index)}
                   className="block rounded-lg px-2.5 py-2 transition hover:bg-zinc-900 focus-visible:bg-zinc-900 focus-visible:outline-none"
                 >
                   <span className="block truncate text-xs font-medium text-zinc-200">
