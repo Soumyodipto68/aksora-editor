@@ -22,7 +22,14 @@ const WORD_OVERRIDES: Record<string, string> = {
   kothao: "কোথাও",
   bharat: "ভারত",
   soumyodipto: "সৌম্যদীপ্ত",
+  juktaxar: "যুক্তাক্ষর",
+  juktakkhor: "যুক্তাক্ষর",
+  juktakshar: "যুক্তাক্ষর",
 };
+
+export function getBengaliWordOverride(word: string): string | null {
+  return WORD_OVERRIDES[word.toLowerCase()] ?? null;
+}
 
 function transliteratePart(
   part: string,
@@ -47,7 +54,7 @@ function transliteratePart(
   }
 
   const [, word, suffix] = match;
-  const override = WORD_OVERRIDES[word.toLowerCase()];
+  const override = getBengaliWordOverride(word);
 
   if (override) {
     return override + suffix;

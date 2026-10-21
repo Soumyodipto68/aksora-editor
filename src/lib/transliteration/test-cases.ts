@@ -254,6 +254,16 @@ export const TRANSLITERATION_TEST_CASES: TransliterationTestCase[] = [
     expected: "ভারত",
     category: "places",
   },
+  {
+    input: "juktaxar",
+    expected: "যুক্তাক্ষর",
+    category: "conjuncts",
+  },
+  {
+    input: "juktakkhor",
+    expected: "যুক্তাক্ষর",
+    category: "conjuncts",
+  },
 
   /*
    * ==========================================

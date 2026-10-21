@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import path from "node:path";
 import { IndicTransliterator } from "@cloudrumbles/indic-transliterate";
-import { transliterateBengaliCandidates } from "@/lib/transliteration/bengali";
+import {
+  getBengaliWordOverride,
+  transliterateBengaliCandidates,
+} from "@/lib/transliteration/bengali";
 
 export const runtime = "nodejs";
 
@@ -120,6 +123,7 @@ export async function POST(request: Request) {
 
     if (language === "bn") {
       const localCandidates = transliterateBengaliCandidates(word);
+      const localOverride = getBengaliWordOverride(word);
       let modelCandidates: string[] = [];
 
       try {
@@ -132,10 +136,15 @@ export async function POST(request: Request) {
       }
 
       const candidates = [
-        ...new Set([...modelCandidates, ...localCandidates, word]),
+        ...new Set([
+          ...(localOverride ? [localOverride] : []),
+          ...modelCandidates,
+          ...localCandidates,
+          word,
+        ]),
       ].filter((candidate) => candidate.trim().length > 0);
       const converted =
-        modelCandidates[0] ?? localCandidates[0] ?? word;
+        localOverride ?? modelCandidates[0] ?? localCandidates[0] ?? word;
       cacheCandidates(cacheKey, candidates);
 
       return NextResponse.json({
