@@ -12,7 +12,9 @@ function searchableText(content: string) {
 
 function createSnippet(content: string, query: string) {
   content = searchableText(content);
-  const matchIndex = content.toLocaleLowerCase().indexOf(query.toLocaleLowerCase());
+  const matchIndex = content
+    .toLocaleLowerCase()
+    .indexOf(query.toLocaleLowerCase());
   const start = matchIndex < 0 ? 0 : Math.max(0, matchIndex - 45);
   const end = Math.min(content.length, start + 120);
   const snippet = content.slice(start, end).replace(/\s+/g, " ").trim();
@@ -73,8 +75,9 @@ export async function GET(request: Request) {
         select: { id: true, name: true, parentId: true },
       }),
     ]);
-
-    const folderById = new Map(folders.map((folder) => [folder.id, folder]));
+    const folderById = new Map(
+      folders.map((folder) => [folder.id, folder] as const),
+    );
     const results = works.map((work) => {
       const path: string[] = [];
       const visited = new Set<string>();
@@ -83,9 +86,7 @@ export async function GET(request: Request) {
       while (folder && !visited.has(folder.id)) {
         visited.add(folder.id);
         path.unshift(folder.name);
-        folder = folder.parentId
-          ? folderById.get(folder.parentId)
-          : undefined;
+        folder = folder.parentId ? folderById.get(folder.parentId) : undefined;
       }
 
       return {
