@@ -1,6 +1,5 @@
 import { CONSONANTS, INDEPENDENT_VOWELS, VOWEL_SIGNS } from "./rules";
-
-import type { ResolvedConsonantSyllable } from "./consonant-context";
+import type { ResolvedSyllable } from "./vowel-context";
 
 const VIRAMA = "্";
 
@@ -16,15 +15,11 @@ function renderVowelSign(vowel: string): string {
   return VOWEL_SIGNS[vowel] ?? "";
 }
 
-export function renderSyllables(
-  syllables: ResolvedConsonantSyllable[],
-): string {
+export function renderSyllables(syllables: ResolvedSyllable[]): string {
   let result = "";
 
   for (const syllable of syllables) {
-    /*
-     * Standalone vowel.
-     */
+    // Standalone vowel
     if (syllable.consonant === null) {
       if (syllable.resolvedVowel) {
         result += renderIndependentVowel(syllable.resolvedVowel);
@@ -33,9 +28,7 @@ export function renderSyllables(
       continue;
     }
 
-    /*
-     * Main consonant.
-     */
+    // Main consonant
     const consonant =
       syllable.resolvedConsonant ??
       CONSONANTS[syllable.consonant] ??
@@ -43,24 +36,18 @@ export function renderSyllables(
 
     result += renderConsonant(consonant);
 
-    /*
-     * Virama.
-     */
+    // Virama
     if (syllable.needsVirama) {
       result += VIRAMA;
       continue;
     }
 
-    /*
-     * Vowel sign.
-     */
+    // Vowel sign
     if (syllable.resolvedVowel) {
       result += renderVowelSign(syllable.resolvedVowel);
     }
 
-    /*
-     * Final consonant.
-     */
+    // Final consonant
     if (syllable.finalConsonant && syllable.resolvedFinalConsonant) {
       result += syllable.resolvedFinalConsonant;
     }

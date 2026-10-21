@@ -49,5 +49,16 @@ export default async function CollectionPage({ params }: CollectionPageProps) {
     notFound();
   }
 
-  return <CollectionDashboard collection={collection} />;
+  const formattedCollection = {
+    ...collection,
+    works: collection.works.map((item) => ({
+      ...item,
+      work: {
+        ...item.work,
+        updatedAt: item.work.updatedAt.toISOString(),
+      },
+    })),
+  };
+
+  return <CollectionDashboard collection={formattedCollection} />;
 }

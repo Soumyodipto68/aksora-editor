@@ -1,13 +1,13 @@
-import type { Syllable } from "./syllable";
+import type { ResolvedConsonantSyllable } from "./consonant-context";
 
-export type ResolvedSyllable = Syllable & {
+export type ResolvedSyllable = ResolvedConsonantSyllable & {
   resolvedVowel: string | null;
 };
 
 function resolveVowel(
-  syllable: Syllable,
+  syllable: ResolvedConsonantSyllable,
   index: number,
-  syllables: Syllable[],
+  syllables: ResolvedConsonantSyllable[],
 ): string | null {
   const vowel = syllable.vowel;
 
@@ -15,14 +15,7 @@ function resolveVowel(
     return null;
   }
 
-  /*
-   * --------------------------------------------------
-   * INDEPENDENT A
-   * --------------------------------------------------
-   *
-   * A standalone "a" is অ, while initial "a" in a word such as
-   * ami or ache is pronounced আ.
-   */
+  // Independent A
   if (syllable.consonant === null && vowel === "a") {
     if (index === 0 && syllables.length > 1) {
       return "aa";
@@ -31,20 +24,7 @@ function resolveVowel(
     return "a";
   }
 
-  /*
-   * --------------------------------------------------
-   * INITIAL / INDEPENDENT O
-   * --------------------------------------------------
-   *
-   * A standalone "o" at the beginning of a
-   * multi-syllable word often represents অ.
-   *
-   * onek → অনেক
-   *
-   * But a standalone word:
-   *
-   * o → ও
-   */
+  // Initial / independent O
   if (syllable.consonant === null && vowel === "o") {
     if (syllables.length > 1) {
       return "a";
@@ -53,20 +33,7 @@ function resolveVowel(
     return "o";
   }
 
-  /*
-   * --------------------------------------------------
-   * CLOSED O
-   * --------------------------------------------------
-   *
-   * kemon → কেমন
-   *
-   * But a single-syllable word:
-   *
-   * bon → বোন
-   *
-   * therefore we only reduce o → a when the
-   * syllable is not the entire word.
-   */
+  // Closed O
   if (
     syllable.consonant !== null &&
     vowel === "o" &&
@@ -79,11 +46,7 @@ function resolveVowel(
     return "a";
   }
 
-  /*
-   * --------------------------------------------------
-   * CONSONANT + A
-   * --------------------------------------------------
-   */
+  // Consonant + A
   if (syllable.consonant !== null && vowel === "a") {
     return "aa";
   }
@@ -91,10 +54,11 @@ function resolveVowel(
   return vowel;
 }
 
-export function resolveVowels(syllables: Syllable[]): ResolvedSyllable[] {
+export function resolveVowels(
+  syllables: ResolvedConsonantSyllable[],
+): ResolvedSyllable[] {
   return syllables.map((syllable, index) => ({
     ...syllable,
-
     resolvedVowel: resolveVowel(syllable, index, syllables),
   }));
 }
