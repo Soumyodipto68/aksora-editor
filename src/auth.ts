@@ -15,20 +15,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
 
-  session: {
-    strategy: "database",
-  },
+  session: { strategy: "database" },
 
-  pages: {
-    signIn: "/login",
-  },
+  pages: { signIn: "/login" },
 
-  callbacks: {
-    async signIn({ user }) {
+  events: {
+    async createUser({ user }) {
       if (user.id) {
         await createDefaultFolders(user.id);
       }
-      return true;
     },
   },
 });
