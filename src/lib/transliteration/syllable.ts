@@ -1,4 +1,8 @@
-import { CONSONANT_KEYS, VOWEL_KEYS } from "./rules";
+import {
+  CONSONANT_KEYS,
+  SPECIAL_CONSONANT_KEYS,
+  VOWEL_KEYS,
+} from "./rules";
 
 export type Syllable = {
   consonant: string | null;
@@ -20,6 +24,13 @@ function matchLongest(
   }
 
   return null;
+}
+
+function matchConsonant(input: string, index: number): string | null {
+  return (
+    matchLongest(input, index, SPECIAL_CONSONANT_KEYS) ??
+    matchLongest(input, index, CONSONANT_KEYS)
+  );
 }
 
 export function parseSyllables(input: string): Syllable[] {
@@ -56,7 +67,7 @@ export function parseSyllables(input: string): Syllable[] {
      * ================================================
      */
 
-    const consonant = matchLongest(input, index, CONSONANT_KEYS);
+    const consonant = matchConsonant(input, index);
 
     if (consonant) {
       const consonantEnd = index + consonant.length;
@@ -76,10 +87,14 @@ export function parseSyllables(input: string): Syllable[] {
          * follows this syllable.
          */
 
-        const nextConsonant = matchLongest(input, afterVowel, CONSONANT_KEYS);
+        const nextConsonant = matchConsonant(input, afterVowel);
 
         if (nextConsonant) {
           const afterNextConsonant = afterVowel + nextConsonant.length;
+          const consonantAfterNext = matchConsonant(
+            input,
+            afterNextConsonant,
+          );
 
           /*
            * If another vowel follows the
@@ -99,7 +114,10 @@ export function parseSyllables(input: string): Syllable[] {
             VOWEL_KEYS,
           );
 
-          if (!vowelAfterNext) {
+          if (
+            !vowelAfterNext &&
+            (!consonantAfterNext || nextConsonant === "ng")
+          ) {
             /*
              * Final consonant.
              *
@@ -147,7 +165,7 @@ export function parseSyllables(input: string): Syllable[] {
        * ==============================================
        */
 
-      const nextConsonant = matchLongest(input, consonantEnd, CONSONANT_KEYS);
+      const nextConsonant = matchConsonant(input, consonantEnd);
 
       if (nextConsonant) {
         const afterNextConsonant = consonantEnd + nextConsonant.length;
@@ -168,8 +186,8 @@ export function parseSyllables(input: string): Syllable[] {
            *
            * a + p + ni
            *
-           * We mark it as joined, but DON'T
-           * automatically render a virama.
+           * This consonant ends in a virama before
+           * the next consonant begins.
            */
 
           syllables.push({
@@ -177,7 +195,7 @@ export function parseSyllables(input: string): Syllable[] {
             vowel: null,
             finalConsonant: null,
             joined: true,
-            needsVirama: false,
+            needsVirama: true,
           });
 
           index = consonantEnd;
@@ -195,7 +213,7 @@ export function parseSyllables(input: string): Syllable[] {
         vowel: null,
         finalConsonant: null,
         joined: false,
-        needsVirama: false,
+        needsVirama: Boolean(nextConsonant),
       });
 
       index = consonantEnd;

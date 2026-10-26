@@ -1,4 +1,4 @@
-import { CONSONANTS } from "./rules";
+import { CONSONANTS, SPECIAL_CONSONANTS } from "./rules";
 
 import type { Syllable } from "./syllable";
 
@@ -43,7 +43,7 @@ function resolveConsonant(
     return "চ";
   }
 
-  return CONSONANTS[consonant] ?? consonant;
+  return SPECIAL_CONSONANTS[consonant] ?? CONSONANTS[consonant] ?? consonant;
 }
 
 /*
@@ -89,7 +89,7 @@ function resolveFinalConsonant(consonant: string | null): string | null {
     return "ং";
   }
 
-  return CONSONANTS[consonant] ?? consonant;
+  return SPECIAL_CONSONANTS[consonant] ?? CONSONANTS[consonant] ?? consonant;
 }
 
 export function resolveConsonants(

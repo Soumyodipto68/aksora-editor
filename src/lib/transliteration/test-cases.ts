@@ -264,6 +264,91 @@ export const TRANSLITERATION_TEST_CASES: TransliterationTestCase[] = [
     expected: "যুক্তাক্ষর",
     category: "conjuncts",
   },
+  {
+    input: "ksh",
+    expected: "ক্ষ",
+    category: "conjuncts",
+  },
+  {
+    input: "kkh",
+    expected: "ক্ষ",
+    category: "conjuncts",
+  },
+  {
+    input: "tra",
+    expected: "ত্রা",
+    category: "conjuncts",
+  },
+  {
+    input: "kra",
+    expected: "ক্রা",
+    category: "conjuncts",
+  },
+  {
+    input: "gra",
+    expected: "গ্রা",
+    category: "conjuncts",
+  },
+  {
+    input: "pra",
+    expected: "প্রা",
+    category: "conjuncts",
+  },
+  {
+    input: "bra",
+    expected: "ব্রা",
+    category: "conjuncts",
+  },
+  {
+    input: "dra",
+    expected: "দ্রা",
+    category: "conjuncts",
+  },
+  {
+    input: "fra",
+    expected: "ফ্রা",
+    category: "conjuncts",
+  },
+  {
+    input: "apni",
+    expected: "আপনি",
+    category: "conjuncts",
+  },
+  {
+    input: "shikkha",
+    expected: "শিক্ষা",
+    category: "conjuncts",
+  },
+  {
+    input: "shokti",
+    expected: "শক্তি",
+    category: "conjuncts",
+  },
+  {
+    input: "bondhu",
+    expected: "বন্ধু",
+    category: "conjuncts",
+  },
+  {
+    input: "proshno",
+    expected: "প্রশ্ন",
+    category: "conjuncts",
+  },
+  {
+    input: "montro",
+    expected: "মন্ত্র",
+    category: "conjuncts",
+  },
+  {
+    input: "gyan",
+    expected: "জ্ঞান",
+    category: "conjuncts",
+  },
+  {
+    input: "mukti",
+    expected: "মুক্তি",
+    category: "conjuncts",
+  },
 
   /*
    * ==========================================

@@ -57,6 +57,7 @@ export const CONSONANTS: Record<string, string> = {
 
 export const SPECIAL_CONSONANTS: Record<string, string> = {
   ksh: "ক্ষ",
+  kkh: "ক্ষ",
   tr: "ত্র",
   kr: "ক্র",
   gr: "গ্র",
